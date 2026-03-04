@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "product",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "inversiones-prototype",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/melinaant/Downloads/inversiones-prototype/inversiones-prototype"],
+      "port": 3000
+    },
+    {
+      "name": "stock-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/melinaant/Desktop/stock-analysis-dashboard-v7", "--", "--host"],
+      "port": 5173
+    }
+  ]
+}

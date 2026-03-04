@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #111;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── PHONE ─────────────────────────────────────────── */
+    .phone {
+      width: 375px;
+      background: #0C0C0E;
+      border-radius: 44px;
+      box-shadow: 0 0 0 1px #2a2a2a, 0 40px 100px rgba(0,0,0,.9);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .notch {
+      height: 48px;
+      background: #0C0C0E;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 6px;
+    }
+    .notch-pill {
+      width: 120px;
+      height: 34px;
+      background: #000;
+      border-radius: 20px;
+    }
+    .screen {
+      padding: 16px 20px 40px;
+      overflow-y: auto;
+      max-height: 780px;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    .header { margin-bottom: 20px; }
+    .header-label {
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 4px;
+    }
+    .portfolio-total {
+      font-size: 36px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    .portfolio-return {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #30D158;
+      background: rgba(48,209,88,.12);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .portfolio-return.neg { color: #FF453A; background: rgba(255,69,58,.12); }
+    .period-label {
+      display: block;
+      font-size: 12px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    /* ─── TOGGLE ─────────────────────────────────────────── */
+    .toggle-wrap {
+      display: flex;
+      background: #1C1C1E;
+      border-radius: 12px;
+      padding: 3px;
+      margin-bottom: 20px;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      background: transparent;
+      color: #666;
+    }
+    .toggle-btn.active {
+      background: #2C2C2E;
+      color: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    }
+
+    /* ─── VIEWS ──────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+    .view-subtitle {
+      font-size: 12px;
+      color: #555;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* ─── CHART CONTAINER ───────────────────────────────── */
+    .chart-box {
+      position: relative;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    /* ─── STOCK BARS (HOY) ──────────────────────────────── */
+    .stock-list { display: flex; flex-direction: column; gap: 10px; }
+    .stock-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stock-ticker {
+      width: 44px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .bar-wrap {
+      flex: 1;
+      background: #1C1C1E;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width .6s ease;
+    }
+    .stock-pct {
+      width: 38px;
+      text-align: right;
+      font-size: 12px;
+      color: #888;
+    }
+    .stock-val {
+      width: 62px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* ─── STOCK CARDS (HISTÓRICO) ────────────────────────── */
+    .section-title {
+      font-size: 11px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin: 4px 0 10px;
+    }
+    .stock-cards { display: flex; flex-direction: column; gap: 8px; }
+    .stock-card {
+      background: #1C1C1E;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .card-info { flex: 1; }
+    .card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .card-since {
+      font-size: 11px;
+      color: #555;
+      margin-top: 2px;
+    }
+    .card-prices {
+      font-size: 11px;
+      color: #666;
+      margin-top: 3px;
+    }
+    .card-right { text-align: right; }
+    .card-current-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .card-delta {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .card-delta.pos { color: #30D158; }
+    .card-delta.neg { color: #FF453A; }
+
+    /* ─── LEGEND (HISTÓRICO CHART) ──────────────────────── */
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #888;
+    }
+    .legend-line {
+      width: 20px;
+      height: 2px;
+      border-radius: 2px;
+    }
+    .legend-line.dashed {
+      border-top: 2px dashed #666;
+      height: 0;
+      background: none;
+    }
+
+    /* ─── NOTES PANEL (right side) ─────────────────────── */
+    .notes-panel {
+      max-width: 320px;
+      color: #ccc;
+    }
+    .notes-panel h2 {
+      color: #fff;
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+    .notes-panel p {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .note-block {
+      background: #1a1a1a;
+      border-left: 3px solid #30D158;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .note-block.yellow { border-color: #FFD60A; }
+    .note-block.red { border-color: #FF453A; }
+    .note-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .note-desc {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     PHONE MOCKUP
+══════════════════════════════════════════════════════ -->
+<div class="phone">
+  <div class="notch"><div class="notch-pill"></div></div>
+  <div class="screen">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-label">Mis inversiones</div>
+      <div class="portfolio-total">$9.840</div>
+      <div class="portfolio-return" id="main-return">+$4.835 · +96,7%</div>
+      <span class="period-label" id="main-period">desde mar 2023</span>
+    </div>
+
+    <!-- TOGGLE -->
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" data-view="hoy">HOY</button>
+      <button class="toggle-btn" data-view="historico">HISTÓRICO</button>
+    </div>
+
+    <!-- ── VIEW: HOY ────────────────────────────── -->
+    <div class="view active" id="view-hoy">
+      <div class="view-subtitle">26 feb 2026 · composición actual</div>
+
+      <div class="chart-box" style="height:200px; margin-bottom:16px;">
+        <canvas id="chart-hoy"></canvas>
+      </div>
+
+      <div class="stock-list" id="hoy-list"></div>
+    </div>
+
+    <!-- ── VIEW: HISTÓRICO ──────────────────────── -->
+    <div class="view" id="view-historico">
+      <div class="view-subtitle">evolución desde tu primera inversión</div>
+
+      <div class="chart-legend">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#30D158;"></div>
+          Valor actual
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed"></div>
+          Invertido
+        </div>
+      </div>
+
+      <div class="chart-box" style="height:200px; margin-bottom:16px;">
+        <canvas id="chart-historico"></canvas>
+      </div>
+
+      <div class="section-title">rendimiento por acción</div>
+      <div class="stock-cards" id="stock-cards"></div>
+    </div>
+
+  </div><!-- /screen -->
+</div><!-- /phone -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     NOTES PANEL
+══════════════════════════════════════════════════════ -->
+<div class="notes-panel">
+  <h2>¿Qué muestra este gráfico?</h2>
+  <p>Dos vistas para el mismo portfolio, según el contexto del usuario.</p>
+
+  <div class="note-block">
+    <div class="note-title">Vista HOY</div>
+    <div class="note-desc">
+      Composición del portfolio en el momento actual.<br>
+      Barras ordenadas de mayor a menor.<br>
+      Muestra cuánto vale cada posición <strong>hoy</strong>.
+    </div>
+  </div>
+
+  <div class="note-block yellow">
+    <div class="note-title">Vista HISTÓRICO — Área chart</div>
+    <div class="note-desc">
+      Línea verde = valor total del portfolio a lo largo del tiempo.<br>
+      Línea punteada = dinero que realmente invertiste.<br>
+      El área entre las dos = ganancia acumulada (verde) o pérdida (rojo).<br>
+      Los <strong>puntos</strong> marcan cuándo entraste a cada acción.
+    </div>
+  </div>
+
+  <div class="note-block red">
+    <div class="note-title">Vista HISTÓRICO — Cards por acción</div>
+    <div class="note-desc">
+      Cada card muestra desde cuándo tenés la posición,<br>
+      el precio de entrada vs. precio actual, y el delta en % y $.<br>
+      Eso es <em>"la diferencia desde que arrancaste"</em>.
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ══════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════
+const STOCKS = [
+  {
+    ticker: 'AAPL',
+    name: 'Apple',
+    color: '#A8B0BC',
+    entryMonth: 0,   // Mar 2023
+    entryPrice: 150.50,
+    qty: 10,
+    // monthly close prices Mar 23 → Feb 26 (36 months)
+    prices: [150,158,175,190,192,178,171,170,189,193,185,182,
+             171,170,192,210,218,226,233,230,237,247,240,242,
+             220,207,212,210,225,230,228,230,237,250,248,245]
+  },
+  {
+    ticker: 'MSFT',
+    name: 'Microsoft',
+    color: '#00A4EF',
+    entryMonth: 3,   // Jun 2023
+    entryPrice: 335,
+    qty: 5,
+    prices: [null,null,null,335,337,320,316,330,373,375,372,403,
+             420,399,430,445,440,417,440,433,425,440,426,406,
+             390,380,395,400,415,420,425,430,435,445,440,415]
+  },
+  {
+    ticker: 'TSLA',
+    name: 'Tesla',
+    color: '#E82127',
+    entryMonth: 7,   // Oct 2023
+    entryPrice: 250,
+    qty: 8,
+    prices: [null,null,null,null,null,null,null,250,235,248,185,200,
+             175,147,175,186,215,215,250,260,352,400,350,375,
+             288,250,290,310,320,330,310,300,350,380,400,360]
+  },
+  {
+    ticker: 'NVDA',
+    name: 'NVIDIA',
+    color: '#76B900',
+    entryMonth: 16,  // Jul 2024
+    entryPrice: 125,
+    qty: 12,
+    prices: [null,null,null,null,null,null,null,null,null,null,null,null,
+             null,null,null,null,125,110,121,140,148,135,124,132,
+             115,90,108,130,135,130,125,140,148,155,152,135]
+  },
+  {
+    ticker: 'AMZN',
+    name: 'Amazon',
+    color: '#FF9900',
+    entryMonth: 18, // Sep 2024
+    entryPrice: 195,
+    qty: 6,
+    prices: [null,null,null,null,null,null,null,null,null,null,null,null,
+             null,null,null,null,null,null,195,200,205,210,205,200,
+             198,195,200,205,208,210,212,215,218,220,222,220]
+  },
+];
+
+const MONTHS = ['Mar 23','Abr 23','May 23','Jun 23','Jul 23','Ago 23','Sep 23',
+                'Oct 23','Nov 23','Dic 23','Ene 24','Feb 24','Mar 24','Abr 24',
+                'May 24','Jun 24','Jul 24','Ago 24','Sep 24','Oct 24','Nov 24',
+                'Dic 24','Ene 25','Feb 25','Mar 25','Abr 25','May 25','Jun 25',
+                'Jul 25','Ago 25','Sep 25','Oct 25','Nov 25','Dic 25','Ene 26','Feb 26'];
+
+// Compute monthly totals
+const N = MONTHS.length;
+const portfolioValues = new Array(N).fill(0);
+const investedValues  = new Array(N).fill(0);
+
+STOCKS.forEach(s => {
+  let totalInvested = 0;
+  for (let m = 0; m < N; m++) {
+    if (s.prices[m] !== null) {
+      if (m === s.entryMonth) totalInvested += s.entryPrice * s.qty;
+      portfolioValues[m] += (s.prices[m] || 0) * s.qty;
+    }
+    // accumulated invested up to month m
+    if (m >= s.entryMonth) investedValues[m] += s.entryPrice * s.qty;
+  }
+});
+
+// Current values (last month = Feb 26)
+const LAST = N - 1;
+function currentVal(s) { return s.prices[LAST] * s.qty; }
+function gain(s) { return currentVal(s) - s.entryPrice * s.qty; }
+function gainPct(s) { return (gain(s) / (s.entryPrice * s.qty)) * 100; }
+function fmt(n) { return '$' + n.toLocaleString('es-AR', {maximumFractionDigits:0}); }
+function fmtSign(n) { return (n >= 0 ? '+' : '') + fmt(n); }
+
+const totalPortfolio = portfolioValues[LAST];
+const totalInvested  = investedValues[LAST];
+const totalGain      = totalPortfolio - totalInvested;
+const totalGainPct   = (totalGain / totalInvested) * 100;
+
+// Update header
+document.getElementById('main-return').textContent =
+  fmtSign(totalGain) + ' · ' + (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(1) + '%';
+document.getElementById('main-return').className =
+  'portfolio-return' + (totalGain < 0 ? ' neg' : '');
+document.querySelector('.portfolio-total').textContent = fmt(totalPortfolio);
+
+// ══════════════════════════════════════════════════════
+//  CHART: HOY (horizontal bar)
+// ══════════════════════════════════════════════════════
+const sortedStocks = [...STOCKS].sort((a,b) => currentVal(b) - currentVal(a));
+
+// Build the bar list
+const hoyList = document.getElementById('hoy-list');
+sortedStocks.forEach(s => {
+  const val = currentVal(s);
+  const pct = (val / totalPortfolio * 100).toFixed(0);
+  hoyList.innerHTML += `
+    <div class="stock-row">
+      <div class="stock-ticker">${s.ticker}</div>
+      <div class="bar-wrap">
+        <div class="bar-fill" style="width:${pct}%;background:${s.color};"></div>
+      </div>
+      <div class="stock-pct">${pct}%</div>
+      <div class="stock-val">${fmt(val)}</div>
+    </div>`;
+});
+
+// Doughnut chart
+const hoyCtx = document.getElementById('chart-hoy').getContext('2d');
+new Chart(hoyCtx, {
+  type: 'doughnut',
+  data: {
+    labels: sortedStocks.map(s => s.ticker),
+    datasets: [{
+      data: sortedStocks.map(currentVal),
+      backgroundColor: sortedStocks.map(s => s.color),
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '70%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}  ${fmt(ctx.raw)}  (${(ctx.raw/totalPortfolio*100).toFixed(1)}%)`
+        }
+      }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  CHART: HISTÓRICO (area + invested line + entry markers)
+// ══════════════════════════════════════════════════════
+const histCtx = document.getElementById('chart-historico').getContext('2d');
+
+// Build per-point style arrays for entry markers on the portfolio line
+const entryMonths = new Set(STOCKS.map(s => s.entryMonth));
+const pointRadii  = portfolioValues.map((_, i) => entryMonths.has(i) ? 7 : 0);
+const pointHoverR = portfolioValues.map((_, i) => entryMonths.has(i) ? 9 : 5);
+const pointColors = portfolioValues.map((_, i) => {
+  const s = STOCKS.find(st => st.entryMonth === i);
+  return s ? s.color : '#30D158';
+});
+const pointBorder = portfolioValues.map((_, i) => entryMonths.has(i) ? '#0C0C0E' : 'transparent');
+
+// Build tooltip label for entry months
+const entryLabel = (monthIdx) => {
+  const s = STOCKS.find(st => st.entryMonth === monthIdx);
+  return s ? `  ★ Compra ${s.ticker} a ${fmt(s.entryPrice * s.qty)}` : null;
+};
+
+// Gradient fill for portfolio area
+const grad = histCtx.createLinearGradient(0, 0, 0, 200);
+grad.addColorStop(0, 'rgba(48,209,88,0.35)');
+grad.addColorStop(1, 'rgba(48,209,88,0.00)');
+
+new Chart(histCtx, {
+  type: 'line',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      {
+        label: 'Valor cartera',
+        data: portfolioValues,
+        borderColor: '#30D158',
+        borderWidth: 2.5,
+        backgroundColor: grad,
+        fill: true,
+        tension: 0.4,
+        pointRadius: pointRadii,
+        pointHoverRadius: pointHoverR,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointBorder,
+        pointBorderWidth: 2,
+      },
+      {
+        label: 'Invertido',
+        data: investedValues,
+        borderColor: '#555',
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const idx = items[0]?.dataIndex;
+            const lbl = entryLabel(idx);
+            return lbl ? [lbl] : [];
+          },
+          label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`
+        },
+        backgroundColor: '#1C1C1E',
+        titleColor: '#fff',
+        bodyColor: '#aaa',
+        borderColor: '#333',
+        borderWidth: 1,
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#555', font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 },
+        grid: { color: '#1C1C1E' }
+      },
+      y: {
+        ticks: { color: '#555', font: { size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'K' },
+        grid: { color: '#222' }
+      }
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  STOCK CARDS (HISTÓRICO)
+// ══════════════════════════════════════════════════════
+const cards = document.getElementById('stock-cards');
+// Sort by absolute gain desc
+const cardStocks = [...STOCKS].sort((a,b) => Math.abs(gainPct(b)) - Math.abs(gainPct(a)));
+const entryMonthLabel = s => MONTHS[s.entryMonth];
+
+cardStocks.forEach(s => {
+  const g = gain(s);
+  const gp = gainPct(s);
+  const invested = s.entryPrice * s.qty;
+  const current  = currentVal(s);
+  const isPos = g >= 0;
+  cards.innerHTML += `
+    <div class="stock-card">
+      <div class="card-dot" style="background:${s.color};"></div>
+      <div class="card-info">
+        <div class="card-name">${s.ticker} · ${s.name}</div>
+        <div class="card-since">desde ${entryMonthLabel(s)}</div>
+        <div class="card-prices">${fmt(invested)} → ${fmt(current)}</div>
+      </div>
+      <div class="card-right">
+        <div class="card-current-val">${fmt(current)}</div>
+        <div class="card-delta ${isPos ? 'pos' : 'neg'}">
+          ${isPos ? '▲' : '▼'} ${Math.abs(gp).toFixed(1)}%
+        </div>
+      </div>
+    </div>`;
+});
+
+// ══════════════════════════════════════════════════════
+//  TOGGLE LOGIC
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + btn.dataset.view).classList.add('active');
+
+    // Update period label
+    const isHoy = btn.dataset.view === 'hoy';
+    document.getElementById('main-period').textContent = isHoy
+      ? '26 feb 2026'
+      : 'desde mar 2023 · ' + fmt(totalInvested) + ' invertidos';
+  });
+});
+</script>
+</body>
+</html>
