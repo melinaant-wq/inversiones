@@ -3,10 +3,13 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import InversionesHome from "./inversiones-home"
+import InversionesEmptyHome from "./inversiones-home-empty"
 import InversionesMercado from "./inversiones-mercado"
 import InversionesStockDetail from "./inversiones-stock-detail"
 import InversionesBuy from "./inversiones-buy"
 import InversionesSell from "./inversiones-sell"
+import InversionesOnboarding from "./inversiones-onboarding"
+import { useUserConfig } from "@/lib/user-config"
 
 // ── Shared Data Types ────────────────────────────────────────
 
@@ -246,7 +249,7 @@ export function areaPath(pts: [number, number][], h: number): string {
 
 export type InvScreen =
   | { type: "home" }
-  | { type: "mercado"; context: "buy" | "search" }
+  | { type: "mercado"; context: "buy" | "search"; profileFilter?: string }
   | { type: "stock-detail"; stockId: string }
   | { type: "buy"; stockId?: string }
   | { type: "sell"; stockId?: string }
@@ -258,6 +261,8 @@ interface Props {
 }
 
 export default function InversionesFlow({ onClose }: Props) {
+  const { hasInvestments, setHasInvestments, setProfileComplete } = useUserConfig()
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [stack, setStack] = useState<InvScreen[]>([{ type: "home" }])
   const current = stack[stack.length - 1]
 
@@ -278,6 +283,28 @@ export default function InversionesFlow({ onClose }: Props) {
     (current.type === "buy" ? (current.stockId ?? "none") : "") +
     (current.type === "sell" ? (current.stockId ?? "none") : "")
 
+  // Show onboarding quiz when explicitly triggered by the user
+  if (showOnboarding) {
+    return (
+      <div className="flex-1 min-h-0 relative overflow-hidden" style={{ height: "100%" }}>
+        <InversionesOnboarding
+          onComplete={() => {
+            setHasInvestments(true)
+            setProfileComplete(true)
+            setShowOnboarding(false)
+          }}
+          onGoToMercado={(profileName) => {
+            setHasInvestments(true)
+            setProfileComplete(true)
+            setShowOnboarding(false)
+            push({ type: "mercado", context: "buy", profileFilter: profileName })
+          }}
+          onClose={() => setShowOnboarding(false)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex-1 min-h-0 relative overflow-hidden" style={{ height: "100%" }}>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -290,7 +317,14 @@ export default function InversionesFlow({ onClose }: Props) {
           className="absolute inset-0 flex flex-col overflow-hidden"
           style={{ background: "#f5f4f1" }}
         >
-          {current.type === "home" && (
+          {current.type === "home" && !hasInvestments && (
+            <InversionesEmptyHome
+              onClose={onClose}
+              onOpenMercado={(ctx) => push({ type: "mercado", context: ctx })}
+              onStartOnboarding={() => setShowOnboarding(true)}
+            />
+          )}
+          {current.type === "home" && hasInvestments && (
             <InversionesHome
               onClose={onClose}
               onOpenMercado={(ctx) => push({ type: "mercado", context: ctx })}
@@ -301,9 +335,11 @@ export default function InversionesFlow({ onClose }: Props) {
           {current.type === "mercado" && (
             <InversionesMercado
               context={current.context}
+              profileFilter={current.profileFilter}
               onClose={pop}
               onOpenStockDetail={(id) => push({ type: "stock-detail", stockId: id })}
               onOpenBuy={(id) => push({ type: "buy", stockId: id })}
+              onStartOnboarding={() => setShowOnboarding(true)}
             />
           )}
           {current.type === "stock-detail" && (

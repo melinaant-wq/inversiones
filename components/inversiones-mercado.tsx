@@ -2,14 +2,30 @@
 
 import { useState, useMemo, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Search, X, ArrowUpRight, ArrowDownRight, Package, BarChart3, TrendingUp } from "lucide-react"
+import { ArrowLeft, Search, X, ArrowUpRight, ArrowDownRight, Package, BarChart3, TrendingUp, ChevronRight } from "lucide-react"
 import { STOCKS, PACKS, Stock, Pack, getHolding } from "./inversiones-flow"
+import { useUserConfig } from "@/lib/user-config"
 
 interface Props {
   context: "buy" | "search"
+  profileFilter?: string
   onClose: () => void
   onOpenStockDetail: (id: string) => void
   onOpenBuy: (id: string) => void
+  onStartOnboarding?: () => void
+}
+
+// ── Profile-recommended stock IDs ─────────────────────────────
+const PROFILE_RECOMMENDED: Record<string, string[]> = {
+  Conservador: ["SPY", "VTI", "QQQ", "EEM"],
+  Moderado: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN"],
+  Audaz: ["NVDA", "TSLA", "AMD", "META"],
+}
+
+const PROFILE_EMOJI: Record<string, string> = {
+  Conservador: "🛡️",
+  Moderado: "📈",
+  Audaz: "⚡",
 }
 
 type TabType = "packs" | "etfs" | "stocks"
@@ -73,11 +89,25 @@ const STOCK_FILTERS = [
 
 const ETF_IDS_SHOWN = ["SPY", "QQQ", "VTI"]
 
-export default function InversionesMercado({ context, onClose, onOpenStockDetail, onOpenBuy }: Props) {
-  const [activeTab, setActiveTab] = useState<TabType>("packs")
+export default function InversionesMercado({ context, profileFilter, onClose, onOpenStockDetail, onOpenBuy, onStartOnboarding }: Props) {
+  const { hasInvestments } = useUserConfig()
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (profileFilter === "Audaz") return "stocks"
+    if (profileFilter) return "etfs"
+    return "packs"
+  })
   const [searchQuery, setSearchQuery] = useState("")
   const [searchActive, setSearchActive] = useState(context === "search")
   const [activeFilter, setActiveFilter] = useState("Populares")
+  const [showProfileReminder, setShowProfileReminder] = useState(false)
+
+  const handleBuy = useCallback((id: string) => {
+    if (!hasInvestments) {
+      setShowProfileReminder(true)
+    } else {
+      onOpenBuy(id)
+    }
+  }, [hasInvestments, onOpenBuy])
 
   const stocks = STOCKS.filter((s) => s.type === "stock")
   const etfs = STOCKS.filter((s) => s.type === "etf")
@@ -97,8 +127,10 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
   const isSearching = searchActive && searchQuery.length > 0
   const hasResults = isSearching && (searchResults.stocks.length + searchResults.etfs.length + searchResults.packs.length) > 0
 
+  const recommendedIds = profileFilter ? (PROFILE_RECOMMENDED[profileFilter] ?? []) : []
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative">
       {/* Header */}
       <div className="px-5 pt-2 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3 mb-3">
@@ -192,6 +224,28 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+
+        {/* ── Profile filter banner ── */}
+        {profileFilter && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-3 px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5"
+            style={{ background: "#ddf74c" }}
+          >
+            <span className="text-[20px] leading-none">{PROFILE_EMOJI[profileFilter] ?? "✦"}</span>
+            <div>
+              <p className="text-[12px] font-bold leading-tight" style={{ color: "#1c1c1a" }}>
+                Perfil {profileFilter}
+              </p>
+              <p className="text-[11px] leading-tight" style={{ color: "rgba(28,28,26,0.55)" }}>
+                Marcamos las opciones recomendadas para vos
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         <AnimatePresence mode="wait">
 
           {/* ── Search results ── */}
@@ -211,7 +265,7 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                     <>
                       <SectionLabel label="ETFs" />
                       {searchResults.etfs.map((s, i) => (
-                        <MinimalRow key={s.id} stock={s} index={i} tagline={ETF_TAGLINES[s.id]} onTap={() => onOpenStockDetail(s.id)} onBuy={() => onOpenBuy(s.id)} showBuy={context === "buy"} />
+                        <MinimalRow key={s.id} stock={s} index={i} tagline={ETF_TAGLINES[s.id]} onTap={() => onOpenStockDetail(s.id)} onBuy={() => handleBuy(s.id)} showBuy={context === "buy"} isRecommended={recommendedIds.includes(s.id)} />
                       ))}
                     </>
                   )}
@@ -219,7 +273,7 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                     <>
                       <SectionLabel label="Packs" />
                       {searchResults.packs.map((p, i) => (
-                        <PackRow key={p.id} pack={p} index={i} onBuy={() => onOpenBuy(p.stocks[0])} />
+                        <PackRow key={p.id} pack={p} index={i} onBuy={() => handleBuy(p.stocks[0])} />
                       ))}
                     </>
                   )}
@@ -227,7 +281,7 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                     <>
                       <SectionLabel label="Acciones" />
                       {searchResults.stocks.map((s, i) => (
-                        <MinimalRow key={s.id} stock={s} index={i} onTap={() => onOpenStockDetail(s.id)} onBuy={() => onOpenBuy(s.id)} showBuy={context === "buy"} />
+                        <MinimalRow key={s.id} stock={s} index={i} onTap={() => onOpenStockDetail(s.id)} onBuy={() => handleBuy(s.id)} showBuy={context === "buy"} isRecommended={recommendedIds.includes(s.id)} />
                       ))}
                     </>
                   )}
@@ -259,7 +313,7 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                   key={pack.id}
                   pack={pack}
                   index={i}
-                  onBuy={() => onOpenBuy(pack.stocks[0])}
+                  onBuy={() => handleBuy(pack.stocks[0])}
                 />
               ))}
             </motion.div>
@@ -292,8 +346,9 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                     index={i}
                     tagline={ETF_TAGLINES[stock.id]}
                     onTap={() => onOpenStockDetail(stock.id)}
-                    onBuy={() => onOpenBuy(stock.id)}
+                    onBuy={() => handleBuy(stock.id)}
                     showBuy={context === "buy"}
+                    isRecommended={recommendedIds.includes(stock.id)}
                   />
                 ))}
             </motion.div>
@@ -366,9 +421,10 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
                         stock={stock!}
                         index={i}
                         onTap={() => onOpenStockDetail(stock!.id)}
-                        onBuy={() => onOpenBuy(stock!.id)}
+                        onBuy={() => handleBuy(stock!.id)}
                         showBuy={false}
                         noBorder={i === arr.length - 1}
+                        isRecommended={recommendedIds.includes(stock!.id)}
                       />
                     ))}
                 </motion.div>
@@ -378,6 +434,79 @@ export default function InversionesMercado({ context, onClose, onOpenStockDetail
 
         </AnimatePresence>
       </div>
+
+      {/* ── Profile reminder bottom sheet (new user) ── */}
+      <AnimatePresence>
+        {showProfileReminder && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-20"
+              style={{ background: "rgba(28,28,26,0.35)" }}
+              onClick={() => setShowProfileReminder(false)}
+            />
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              className="absolute bottom-0 left-0 right-0 rounded-t-3xl z-30 px-5 pb-6 pt-4"
+              style={{ background: "#f5f4f1" }}
+            >
+              {/* Handle */}
+              <div
+                className="w-10 h-1 rounded-full mx-auto mb-5"
+                style={{ background: "rgba(28,28,26,0.15)" }}
+              />
+
+              {/* Icon */}
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                style={{ background: "#e5e4e1" }}
+              >
+                <svg viewBox="0 0 20 20" fill="none" className="w-6 h-6">
+                  <circle cx="10" cy="10" r="7.5" stroke="#1c1c1a" strokeWidth="1.5" />
+                  <circle cx="10" cy="10" r="4" stroke="#1c1c1a" strokeWidth="1.5" />
+                  <circle cx="10" cy="10" r="1.5" fill="#1c1c1a" />
+                </svg>
+              </div>
+
+              <h3 className="text-[18px] font-bold mb-2" style={{ color: "#1c1c1a" }}>
+                Completar tu perfil
+              </h3>
+              <p className="text-[14px] leading-relaxed mb-5" style={{ color: "rgba(28,28,26,0.55)" }}>
+                Necesitás completar tu perfil de inversor antes de operar. Son 5 preguntas, menos de 1 minuto.
+              </p>
+
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  setShowProfileReminder(false)
+                  onStartOnboarding?.()
+                }}
+                className="w-full rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 mb-3"
+                style={{ background: "#1c1c1a", color: "#ffffff", height: 52 }}
+              >
+                Completar perfil
+                <ChevronRight className="w-4 h-4" />
+              </motion.button>
+
+              <button
+                onClick={() => setShowProfileReminder(false)}
+                className="w-full text-[14px] font-medium py-2 text-center"
+                style={{ color: "rgba(28,28,26,0.4)" }}
+              >
+                Ahora no
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -439,6 +568,7 @@ function MinimalRow({
   onBuy,
   showBuy,
   noBorder,
+  isRecommended,
 }: {
   stock: Stock
   index: number
@@ -447,6 +577,7 @@ function MinimalRow({
   onBuy: () => void
   showBuy: boolean
   noBorder?: boolean
+  isRecommended?: boolean
 }) {
   const holding = getHolding(stock.id)
   const isUp = stock.change >= 0
@@ -468,6 +599,14 @@ function MinimalRow({
             <p className="text-[14px] font-semibold truncate" style={{ color: "#1c1c1a" }}>
               {stock.name}
             </p>
+            {isRecommended && (
+              <span
+                className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                style={{ background: "#ddf74c", color: "#1c1c1a" }}
+              >
+                ✓
+              </span>
+            )}
           </div>
           <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.4)" }}>
             {tagline ?? `${stock.symbol} · ${stock.sector}`}
@@ -506,10 +645,10 @@ function MinimalRow({
 // ── ETF Card (lighter than PackCard) ──────────────────────────
 
 function ETFCard({
-  stock, index, tagline, onTap, onBuy, showBuy,
+  stock, index, tagline, onTap, onBuy, showBuy, isRecommended,
 }: {
   stock: Stock; index: number; tagline?: string
-  onTap: () => void; onBuy: () => void; showBuy: boolean
+  onTap: () => void; onBuy: () => void; showBuy: boolean; isRecommended?: boolean
 }) {
   const isUp = stock.change >= 0
   return (
@@ -518,12 +657,22 @@ function ETFCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.06 * index, duration: 0.2 }}
       className="flex items-center gap-3 p-3.5 rounded-2xl active:scale-[0.98] transition-transform cursor-pointer"
-      style={{ background: "#e5e4e1" }}
+      style={{ background: "#e5e4e1", outline: isRecommended ? "2px solid #ddf74c" : "none" }}
       onClick={onTap}
     >
       <StockAvatar stock={stock} size={10} />
       <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>{stock.name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>{stock.name}</p>
+          {isRecommended && (
+            <span
+              className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+              style={{ background: "#ddf74c", color: "#1c1c1a" }}
+            >
+              ✓
+            </span>
+          )}
+        </div>
         <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.45)" }}>{tagline ?? stock.sector}</p>
       </div>
       <div className="flex items-center gap-0.5 flex-shrink-0">
