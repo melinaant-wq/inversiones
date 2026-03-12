@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import InversionesHome from "./inversiones-home"
 import InversionesEmptyHome from "./inversiones-home-empty"
+import InversionesNoInvestments from "./inversiones-home-no-investments"
 import InversionesMercado from "./inversiones-mercado"
 import InversionesStockDetail from "./inversiones-stock-detail"
 import InversionesBuy from "./inversiones-buy"
@@ -261,7 +262,15 @@ interface Props {
 }
 
 export default function InversionesFlow({ onClose }: Props) {
-  const { hasInvestments, setHasInvestments, setProfileComplete } = useUserConfig()
+  const {
+    hasAccount,
+    setHasAccount,
+    hasInvestments,
+    setHasInvestments,
+    profileName,
+    setProfileName,
+    setProfileComplete,
+  } = useUserConfig()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [stack, setStack] = useState<InvScreen[]>([{ type: "home" }])
   const current = stack[stack.length - 1]
@@ -289,15 +298,18 @@ export default function InversionesFlow({ onClose }: Props) {
       <div className="flex-1 min-h-0 relative overflow-hidden" style={{ height: "100%" }}>
         <InversionesOnboarding
           onComplete={() => {
-            setHasInvestments(true)
+            // Quiz finished without buying → has account but no investments yet
+            setHasAccount(true)
             setProfileComplete(true)
             setShowOnboarding(false)
           }}
-          onGoToMercado={(profileName) => {
-            setHasInvestments(true)
+          onGoToMercado={(name) => {
+            // "Empezar" tapped → has account, go explore mercado (no investments yet)
+            setHasAccount(true)
+            setProfileName(name)
             setProfileComplete(true)
             setShowOnboarding(false)
-            push({ type: "mercado", context: "buy", profileFilter: profileName })
+            push({ type: "mercado", context: "buy", profileFilter: name })
           }}
           onClose={() => setShowOnboarding(false)}
         />
@@ -317,13 +329,25 @@ export default function InversionesFlow({ onClose }: Props) {
           className="absolute inset-0 flex flex-col overflow-hidden"
           style={{ background: "#f5f4f1" }}
         >
-          {current.type === "home" && !hasInvestments && (
+          {/* ── Sin cuenta abierta: must complete onboarding first ── */}
+          {current.type === "home" && !hasAccount && !hasInvestments && (
             <InversionesEmptyHome
               onClose={onClose}
               onOpenMercado={(ctx) => push({ type: "mercado", context: ctx })}
               onStartOnboarding={() => setShowOnboarding(true)}
             />
           )}
+          {/* ── Sin inversiones: has account but hasn't invested yet ── */}
+          {current.type === "home" && hasAccount && !hasInvestments && (
+            <InversionesNoInvestments
+              onClose={onClose}
+              onOpenMercado={(ctx, filter) =>
+                push({ type: "mercado", context: ctx, profileFilter: filter })
+              }
+              profileName={profileName}
+            />
+          )}
+          {/* ── Con inversiones: full portfolio home ── */}
           {current.type === "home" && hasInvestments && (
             <InversionesHome
               onClose={onClose}
@@ -354,7 +378,10 @@ export default function InversionesFlow({ onClose }: Props) {
             <InversionesBuy
               stockId={current.stockId}
               onClose={pop}
-              onDone={reset}
+              onDone={() => {
+                setHasInvestments(true)
+                reset()
+              }}
             />
           )}
           {current.type === "sell" && (
