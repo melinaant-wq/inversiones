@@ -139,7 +139,7 @@ export default function DevStatePanel() {
                   className="overflow-hidden"
                 >
                   <div
-                    className="px-3.5 pt-1 pb-3"
+                    className="px-3.5 pt-2 pb-3"
                     style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <p
@@ -170,6 +170,56 @@ export default function DevStatePanel() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* ── Env vars display ── */}
+            <div
+              className="px-3.5 py-3"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <p
+                className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
+                Variables de entorno
+              </p>
+              <div className="flex flex-col gap-1">
+                {[
+                  {
+                    key: "NEXT_PUBLIC_USER_HAS_ACCOUNT",
+                    value: String(ctx.hasAccount),
+                  },
+                  {
+                    key: "NEXT_PUBLIC_USER_HAS_INVESTMENTS",
+                    value: String(ctx.hasInvestments),
+                  },
+                  {
+                    key: "NEXT_PUBLIC_USER_PROFILE",
+                    value: ctx.profileName || '""',
+                  },
+                ].map(({ key, value }) => (
+                  <div key={key} className="flex items-center justify-between gap-2">
+                    <p
+                      className="text-[9px] font-mono truncate"
+                      style={{ color: "rgba(255,255,255,0.35)" }}
+                    >
+                      {key.replace("NEXT_PUBLIC_USER_", "")}
+                    </p>
+                    <span
+                      className="text-[10px] font-mono font-bold flex-shrink-0 px-1.5 py-0.5 rounded"
+                      style={{
+                        background:
+                          value === "true"
+                            ? "rgba(221,247,76,0.15)"
+                            : "rgba(255,255,255,0.06)",
+                        color: value === "true" ? "#ddf74c" : "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
