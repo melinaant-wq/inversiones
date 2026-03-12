@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight } from "lucide-react"
 import BottomNav from "./bottom-nav"
+import { UserConfigProvider, useUserConfig } from "@/lib/user-config"
 import AppHeader from "./app-header"
 import HomeScreen from "./home-screen"
 import ActivityScreen from "./activity-screen"
@@ -133,8 +134,18 @@ function IntroScreen({ onContinue }: { onContinue: () => void }) {
   )
 }
 
-/* ── Main Onboarding Flow ───────────────────────────────── */
+/* ── Root export — wraps with UserConfigProvider ────────── */
 export default function OnboardingFlow() {
+  return (
+    <UserConfigProvider>
+      <OnboardingFlowContent />
+    </UserConfigProvider>
+  )
+}
+
+/* ── Inner app shell ────────────────────────────────────── */
+function OnboardingFlowContent() {
+  const { hasInvestments, setHasInvestments } = useUserConfig()
   const [phase, setPhase] = useState<Phase>("intro")
   const [activeTab, setActiveTab] = useState("home")
   const [showRedPill, setShowRedPill] = useState(false)
@@ -189,6 +200,7 @@ export default function OnboardingFlow() {
   const isPortfolioGrafico = isApp && activeTab === "portfolio"
 
   return (
+    <div className="flex flex-col items-center gap-4">
     <div
       className="relative w-[360px] h-[800px] rounded-[50px] overflow-hidden transition-colors duration-300"
       style={{
@@ -226,7 +238,9 @@ export default function OnboardingFlow() {
       <div
         className={[
           "h-full flex flex-col transition-colors duration-300",
-          isApp ? (isHomePristine ? "pt-28" : "pt-14") + " pb-28" : "pt-14 pb-8",
+          isApp
+            ? (isHomePristine ? "pt-28" : "pt-14") + (anyOverlay ? "" : " pb-28")
+            : "pt-14 pb-8",
         ].join(" ")}
       >
         <AnimatePresence mode="wait">
@@ -291,6 +305,34 @@ export default function OnboardingFlow() {
       <ProfilePanel open={showProfile} onClose={handleCloseProfile} />
 
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-36 h-1.5 bg-foreground/20" />
+    </div>
+
+    {/* ── Dev toggle ── */}
+    <div
+      className="flex items-center gap-1 p-1 rounded-full"
+      style={{ background: "rgba(28,28,26,0.10)" }}
+    >
+      <button
+        onClick={() => setHasInvestments(false)}
+        className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
+        style={{
+          background: !hasInvestments ? "#1c1c1a" : "transparent",
+          color: !hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
+        }}
+      >
+        Sin inversiones
+      </button>
+      <button
+        onClick={() => setHasInvestments(true)}
+        className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
+        style={{
+          background: hasInvestments ? "#1c1c1a" : "transparent",
+          color: hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
+        }}
+      >
+        Con inversiones
+      </button>
+    </div>
     </div>
   )
 }

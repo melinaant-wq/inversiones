@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TOTAL_PORTFOLIO_USD, TOTAL_PNL, TOTAL_PNL_PCT } from "./inversiones-flow"
+import { useUserConfig } from "@/lib/user-config"
 
 type ViewMode = "lista" | "grafico"
 type TimeRange = "Todo" | "1A" | "1M" | "1S" | "Live"
@@ -94,6 +95,7 @@ export default function PortfolioScreen({
   onOpenInvestments?: () => void
   onOpenCash?: () => void
 }) {
+  const { hasInvestments } = useUserConfig()
   const [view, setView] = useState<ViewMode>("lista")
   const [timeRange, setTimeRange] = useState<TimeRange>("1M")
   const [scrubX, setScrubX] = useState<number | null>(null)
@@ -168,39 +170,71 @@ export default function PortfolioScreen({
             transition={{ duration: 0.22 }}
             className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col gap-3"
           >
-            {assets.map((asset) => (
-              <button
-                key={asset.id}
-                onClick={() => handleAssetTap(asset.id)}
-                className="w-full text-left rounded-3xl p-4 active:scale-[0.98] transition-transform"
-                style={{ background: "#e5e4e1" }}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {asset.isRainbow ? <RainbowDot /> : (
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: asset.dot ?? "#ccc" }} />
+            {assets.map((asset) => {
+              const isInv = asset.id === "inversiones"
+              const showProfilePrompt = isInv && !hasInvestments
+              return (
+                <button
+                  key={asset.id}
+                  onClick={() => handleAssetTap(asset.id)}
+                  className="w-full text-left rounded-3xl p-4 active:scale-[0.98] transition-transform"
+                  style={{ background: "#e5e4e1" }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {asset.isRainbow ? <RainbowDot /> : (
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: asset.dot ?? "#ccc" }} />
+                      )}
+                      <span className="text-[15px] font-medium" style={{ color: "rgba(28,28,26,0.55)" }}>
+                        {asset.label}
+                      </span>
+                    </div>
+                    {!showProfilePrompt && asset.badge && (
+                      <span
+                        className="text-[12px] font-semibold px-2.5 py-1 rounded-full"
+                        style={{ background: asset.badgeBg ?? "#1c1c1a", color: asset.badgeColor ?? "#ddf74c" }}
+                      >
+                        {asset.badge}
+                      </span>
                     )}
-                    <span className="text-[15px] font-medium" style={{ color: "rgba(28,28,26,0.55)" }}>
-                      {asset.label}
-                    </span>
                   </div>
-                  {asset.badge && (
-                    <span
-                      className="text-[12px] font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: asset.badgeBg ?? "#1c1c1a", color: asset.badgeColor ?? "#ddf74c" }}
-                    >
-                      {asset.badge}
-                    </span>
+
+                  {/* New user: profile prompt */}
+                  {showProfilePrompt ? (
+                    <div className="flex items-center gap-2.5 mt-2.5">
+                      {/* target / radio icon */}
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: "rgba(28,28,26,0.08)" }}
+                      >
+                        <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
+                          <circle cx="10" cy="10" r="7.5" stroke="#1c1c1a" strokeWidth="1.5" />
+                          <circle cx="10" cy="10" r="4" stroke="#1c1c1a" strokeWidth="1.5" />
+                          <circle cx="10" cy="10" r="1.5" fill="#1c1c1a" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>
+                          Completar tu perfil
+                        </p>
+                        <p className="text-[12px]" style={{ color: "rgba(28,28,26,0.45)" }}>
+                          5 preguntas · menos de 1 min
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[28px] font-bold mt-2 leading-tight" style={{ color: "#1c1c1a", fontVariantNumeric: "tabular-nums" }}>
+                        {asset.balance}
+                      </p>
+                      <p className="text-[13px] mt-0.5" style={{ color: "rgba(28,28,26,0.45)" }}>
+                        {asset.subtitle}
+                      </p>
+                    </>
                   )}
-                </div>
-                <p className="text-[28px] font-bold mt-2 leading-tight" style={{ color: "#1c1c1a", fontVariantNumeric: "tabular-nums" }}>
-                  {asset.balance}
-                </p>
-                <p className="text-[13px] mt-0.5" style={{ color: "rgba(28,28,26,0.45)" }}>
-                  {asset.subtitle}
-                </p>
-              </button>
-            ))}
+                </button>
+              )
+            })}
 
             {/* Total footer */}
             <div className="flex items-center justify-center pt-1 pb-2">
