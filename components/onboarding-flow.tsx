@@ -13,6 +13,7 @@ import RedPillScreen from "./red-pill-screen"
 import FincraftScreen from "./fincraft-screen"
 import DollarsScreen from "./dollars-screen"
 import InversionesFlow from "./inversiones-flow"
+import DevStatePanel from "./dev-state-panel"
 import CardsScreen from "./cards-screen"
 import CashScreen from "./cash-screen"
 import BalanceTotalScreen from "./balance-total-screen"
@@ -139,6 +140,7 @@ export default function OnboardingFlow() {
   return (
     <UserConfigProvider>
       <OnboardingFlowContent />
+      <DevStatePanel />
     </UserConfigProvider>
   )
 }
