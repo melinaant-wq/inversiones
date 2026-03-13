@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, Sparkles, TrendingUp, Shield, Zap } from "lucide-react"
 
@@ -14,13 +14,8 @@ const QUESTIONS = [
     question: "¿Ya invertiste alguna vez?",
     options: [
       { text: "Nunca invertí", score: 1 },
-      { text: "Probé alguna vez pero no lo hago seguido", score: 2 },
-      { text: "Invierto regularmente (plazos fijos, cripto, acciones, etc.)", score: 3 },
-    ],
-    feedback: [
-      "¡Qué bueno que te animás a dar el primer paso! Todos empezamos de cero y estamos acá para que esa primera vez sea tan simple como comprar un café.",
-      "Buenísimo, ya diste tus primeros pasos. Ahora vamos a ayudarte a que invertir se vuelva un hábito natural.",
-      "¡Genial! Ya tenés cancha en esto. Vamos a potenciar lo que ya sabés con la agilidad de nuestra plataforma.",
+      { text: "Probé alguna vez, pero no lo hago seguido", score: 2 },
+      { text: "Invierto regularmente", score: 3 },
     ],
   },
   {
@@ -31,88 +26,60 @@ const QUESTIONS = [
       { text: "Hacer crecer mi dinero a mediano plazo", score: 2 },
       { text: "Maximizar ganancias aunque implique más riesgo", score: 3 },
     ],
-    feedback: [
-      "Te entiendo perfectamente. Cuidar lo que te costó ganar es la prioridad número uno.",
-      "Esa es la actitud. Hacer que el dinero trabaje para vos a mediano plazo es la base de una buena salud financiera.",
-      "¡Vas por todo! Me gusta ese perfil. Busquemos esas oportunidades con mayor potencial.",
-    ],
   },
   {
     id: 3,
-    question: "¿Cuál es tu horizonte de inversión?",
+    question: "¿En cuánto tiempo necesitarías ese dinero?",
     options: [
       { text: "Menos de un año", score: 1 },
-      { text: "De 1 a 3 años", score: 2 },
-      { text: "De más de 3 años", score: 3 },
-    ],
-    feedback: [
-      "Entendido. Mantener la liquidez es clave cuando necesitás el dinero pronto.",
-      "Un plazo de 1 a 3 años es ideal para que el interés compuesto empiece a hacer su magia.",
-      "¡Mentalidad de inversor profesional! El tiempo es tu mejor aliado para ganar en grande.",
+      { text: "Entre 1 y 3 años", score: 2 },
+      { text: "Más de 3 años", score: 3 },
     ],
   },
   {
     id: 4,
-    question: "Si tu inversión bajara un 20% en un mes, ¿qué harías?",
+    question: "Tu inversión baja un 20% en un mes. ¿Qué hacés?",
     options: [
-      { text: "Vendería todo para no perder más", score: 1 },
-      { text: "Esperaría a que se recupere", score: 2 },
-      { text: "Aprovecharía para comprar más barato", score: 3 },
-    ],
-    feedback: [
-      "Es normal sentir ese miedo, a nadie le gusta ver rojo. Por eso, vamos a configurar un perfil que te permita dormir tranquilo.",
-      "Tenés temple. Entender que el mercado tiene ciclos es fundamental.",
-      "¡Esa es la mirada de oportunidad! Comprar en las bajas es lo que separa a los inversores estratégicos.",
+      { text: "Vendo todo para no perder más", score: 1 },
+      { text: "Espero a que se recupere", score: 2 },
+      { text: "Aprovecho y compro más barato", score: 3 },
     ],
   },
   {
     id: 5,
-    question: "¿Qué parte de tus ahorros pensás destinar a inversiones?",
+    question: "¿Qué parte de tus ahorros pensás destinar?",
     options: [
       { text: "Una parte pequeña (menos del 20%)", score: 1 },
-      { text: "Una parte significativa (20% al 50%)", score: 2 },
+      { text: "Una parte significativa (20% – 50%)", score: 2 },
       { text: "La mayor parte (más del 50%)", score: 3 },
-    ],
-    feedback: [
-      "Es una decisión muy prudente para empezar. Siempre es mejor ir probando el agua antes de tirarse de cabeza.",
-      "Un equilibrio sólido. Destinar una buena parte a inversión es el motor que mueve la aguja de tus finanzas.",
-      "¡Wow, estás 100% comprometido con tu futuro! Vamos a asegurarnos de que ese capital esté bien diversificado.",
     ],
   },
 ]
 
-// ── Compliance Questions ───────────────────────────────────────
-
 const COMPLIANCE_QUESTIONS = [
   {
     id: "pep",
-    question: "Antes de terminar, necesito consultarte algunas cosas de cumplimiento regulatorio. ¿Alguna de estas situaciones aplica a vos?",
+    question: "¿Alguna de estas situaciones te aplica?",
     items: [
       "Soy Director Senior de una empresa que cotiza en bolsa",
       "Poseo más del 10% de una empresa que cotiza en bolsa",
       "Trabajo para un corredor de bolsa de EE.UU.",
-    ],
-    options: ["Ninguna de las anteriores", "Sí, alguna aplica"],
-    feedback: ["Gracias, anotado. Sigamos.", "Entendido, lo vamos a tener en cuenta."],
+    ] as readonly string[],
+    options: ["Ninguna de las anteriores", "Sí, alguna aplica"] as readonly string[],
   },
   {
     id: "usTax",
-    question: "¿Sos ciudadano estadounidense o estás sujeto a impuestos en EE.UU.?",
-    items: undefined as string[] | undefined,
-    options: ["No estoy sujeto a impuestos en EE.UU.", "Sí, estoy sujeto a impuestos en EE.UU."],
-    feedback: [
-      "Perfecto. Para finalizar, confirmá tu declaración W-8BEN.",
-      "Registrado. Igual necesitamos que confirmes el formulario W-8BEN.",
-    ],
+    question: "¿Sos ciudadano o residente fiscal de EE.UU.?",
+    items: undefined as readonly string[] | undefined,
+    options: ["No, no tengo obligaciones fiscales en EE.UU.", "Sí, estoy sujeto a impuestos en EE.UU."] as readonly string[],
   },
   {
     id: "w8ben",
-    question: "Último paso. Confirmá tu declaración para completar tu perfil:",
-    items: undefined as string[] | undefined,
+    question: "Último paso: confirmá tu declaración",
+    items: undefined as readonly string[] | undefined,
     certText:
-      "Certifico que no soy ciudadano de EE. UU., residente extranjero en EE. UU. ni otra persona sujeta a impuestos en EE. UU., y estoy presentando el formulario W-8BEN para certificar mi condición de extranjero y, si corresponde, reclamar los beneficios de un tratado fiscal.",
-    options: ["Confirmar"],
-    feedback: ["¡Listo! Ya tengo todo lo que necesito."],
+      "Certifico que no soy ciudadano de EE. UU., residente extranjero en EE. UU. ni otra persona sujeta a impuestos en EE. UU., y estoy presentando el formulario W-8BEN para certificar mi condición de extranjero.",
+    options: ["Confirmar y continuar"] as readonly string[],
   },
 ] as const
 
@@ -152,110 +119,12 @@ function getProfile(score: number) {
   }
 }
 
-// ── Types ─────────────────────────────────────────────────────
-
-type ChatMsg = { id: string; from: "lim" | "user"; text: string; items?: readonly string[] | string[] }
-
-// ── Limoncito Mini Avatar ─────────────────────────────────────
-
-function LimAvatar({ size = 30 }: { size?: number }) {
-  return (
-    <img
-      src={LIMONCITO}
-      alt="Limoncito"
-      style={{
-        width: size,
-        height: size,
-        objectFit: "contain",
-        borderRadius: "50%",
-        flexShrink: 0,
-        mixBlendMode: "multiply",
-      }}
-    />
-  )
-}
-
-// ── Chat Bubble ────────────────────────────────────────────────
-
-function Bubble({ msg }: { msg: ChatMsg }) {
-  const isLim = msg.from === "lim"
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", stiffness: 340, damping: 28 }}
-      className={`flex items-end gap-2 ${isLim ? "" : "flex-row-reverse"}`}
-    >
-      {isLim ? <LimAvatar /> : <div style={{ width: 30, flexShrink: 0 }} />}
-      <div className="flex flex-col gap-1.5 max-w-[76%]">
-        <div
-          className="px-3.5 py-2.5 text-[14px] font-medium leading-relaxed"
-          style={{
-            background: isLim ? "#e5e4e1" : "#1c1c1a",
-            color: isLim ? "#1c1c1a" : "#ffffff",
-            borderRadius: isLim ? "16px 16px 16px 4px" : "16px 16px 4px 16px",
-          }}
-        >
-          {msg.text}
-        </div>
-        {msg.items && (
-          <div
-            className="overflow-hidden"
-            style={{ background: "#e5e4e1", borderRadius: "4px 16px 16px 16px" }}
-          >
-            {msg.items.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-2 px-3.5 py-2"
-                style={{
-                  borderBottom: i < msg.items!.length - 1 ? "1px solid rgba(28,28,26,0.08)" : "none",
-                }}
-              >
-                <span className="text-[11px] mt-0.5 flex-shrink-0" style={{ color: "rgba(28,28,26,0.35)" }}>•</span>
-                <p className="text-[12px] leading-relaxed" style={{ color: "#1c1c1a" }}>{item}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  )
-}
-
-// ── Typing Indicator ─────────────────────────────────────────
-
-function TypingBubble() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      className="flex items-end gap-2"
-    >
-      <LimAvatar />
-      <div className="px-3.5 py-3.5" style={{ background: "#e5e4e1", borderRadius: "16px 16px 16px 4px" }}>
-        <div className="flex gap-1 items-center">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: "rgba(28,28,26,0.4)" }}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 0.65, delay: i * 0.16, repeat: Infinity, ease: "easeInOut" }}
-            />
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
 // ── Intro Screen ───────────────────────────────────────────────
 
 function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () => void }) {
   return (
     <div className="flex flex-col h-full" style={{ background: "#f5f4f1" }}>
-      <div className="flex justify-end px-5 pt-3 pb-1">
+      <div className="flex justify-end px-5 pt-4">
         <motion.button
           onClick={onClose}
           whileTap={{ scale: 0.9 }}
@@ -268,72 +137,61 @@ function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () =>
         </motion.button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-7 gap-5">
-        {/* Limoncito big */}
+      <div className="flex-1 flex flex-col justify-center px-6 gap-6">
+        {/* Limoncito mascot — small, not chatty */}
         <motion.div
-          initial={{ scale: 0.75, opacity: 0 }}
+          initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 280, damping: 20, delay: 0.1 }}
+          transition={{ type: "spring", stiffness: 280, damping: 20, delay: 0.05 }}
+          className="flex justify-center"
         >
           <img
             src={LIMONCITO}
             alt="Limoncito"
-            className="w-28 h-28 object-contain"
+            className="w-20 h-20 object-contain"
             style={{ mixBlendMode: "multiply" }}
           />
         </motion.div>
 
-        {/* Speech bubble */}
+        {/* Copy */}
         <motion.div
-          initial={{ opacity: 0, y: 14, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.28, type: "spring", stiffness: 280, damping: 26 }}
-          className="w-full relative px-4 py-4 rounded-2xl"
-          style={{ background: "#e5e4e1" }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="text-center"
         >
-          {/* bubble tail pointing up towards Limoncito */}
-          <div
-            className="absolute -top-2.5 left-10 w-0 h-0"
-            style={{
-              borderLeft: "8px solid transparent",
-              borderRight: "8px solid transparent",
-              borderBottom: "12px solid #e5e4e1",
-            }}
-          />
-          <p className="text-[15px] font-bold mb-1" style={{ color: "#1c1c1a" }}>
-            ¡Hola! Soy Limoncito 🍋
-          </p>
-          <p className="text-[13px] leading-relaxed" style={{ color: "rgba(28,28,26,0.65)" }}>
-            Voy a hacerte <strong>5 preguntas cortas</strong> para armar tu perfil
-            inversor y mostrarte las mejores opciones para vos.
+          <h1 className="text-[26px] font-extrabold leading-tight mb-2" style={{ color: "#1c1c1a" }}>
+            Descubrí tu perfil<br />inversor
+          </h1>
+          <p className="text-[14px] leading-relaxed" style={{ color: "rgba(28,28,26,0.55)" }}>
+            5 preguntas para mostrarte las opciones del mercado que mejor se adaptan a vos.
           </p>
         </motion.div>
 
-        {/* Feature tags */}
+        {/* Tags */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.45 }}
+          transition={{ delay: 0.32 }}
           className="flex gap-2 justify-center"
         >
-          {["✓  Personalizado", "✓  2 minutos"].map((t, i) => (
+          {["5 preguntas", "Menos de 2 min", "Personalizado"].map((t) => (
             <span
-              key={i}
+              key={t}
               className="text-[12px] font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: "#ddf74c", color: "#1c1c1a" }}
+              style={{ background: "#e5e4e1", color: "rgba(28,28,26,0.65)" }}
             >
               {t}
             </span>
           ))}
         </motion.div>
-
       </div>
 
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="px-6 pb-7"
+        transition={{ delay: 0.42 }}
+        className="px-6 pb-8"
       >
         <motion.button
           onClick={onStart}
@@ -349,305 +207,213 @@ function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () =>
   )
 }
 
-// ── Chat Screen (Q&A) ─────────────────────────────────────────
+// ── Quiz Screen ────────────────────────────────────────────────
 
-function ChatScreen({
+function QuizScreen({
   onResult,
   onClose,
 }: {
   onResult: (score: number) => void
   onClose: () => void
 }) {
-  const [messages, setMessages] = useState<ChatMsg[]>([])
-  const [currentQ, setCurrentQ] = useState(0)
-  const [showOptions, setShowOptions] = useState(false)
-  const [isTyping, setIsTyping] = useState(true)
-  const [locked, setLocked] = useState(false)
-  const [complianceStep, setComplianceStep] = useState(-1) // -1 = profile mode
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const totalProfile = QUESTIONS.length
+  const totalCompliance = COMPLIANCE_QUESTIONS.length
+  const totalSteps = totalProfile + totalCompliance
+
+  const [stepIndex, setStepIndex] = useState(0)
+  const [selected, setSelected] = useState<number | null>(null)
   const scoresRef = useRef<number[]>([])
 
-  const scrollToBottom = useCallback(() => {
+  const isCompliance = stepIndex >= totalProfile
+  const profileIdx = stepIndex
+  const complianceIdx = stepIndex - totalProfile
+
+  const currentQ = !isCompliance ? QUESTIONS[profileIdx] : null
+  const currentCQ = isCompliance ? COMPLIANCE_QUESTIONS[complianceIdx] : null
+  const options: readonly string[] = currentQ
+    ? currentQ.options.map((o) => o.text)
+    : currentCQ?.options ?? []
+
+  const handleSelect = (optionIdx: number) => {
+    if (selected !== null) return
+    setSelected(optionIdx)
+
+    if (currentQ) {
+      scoresRef.current.push(currentQ.options[optionIdx].score)
+    }
+
     setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      const next = stepIndex + 1
+      if (next >= totalSteps) {
+        const total = scoresRef.current.reduce((a, b) => a + b, 0)
+        onResult(total)
+      } else {
+        setStepIndex(next)
+        setSelected(null)
       }
-    }, 40)
-  }, [])
+    }, 280)
+  }
 
-  const addMsg = useCallback(
-    (from: "lim" | "user", text: string, items?: readonly string[] | string[]) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: `${Date.now()}-${Math.random()}`, from, text, items },
-      ])
-      scrollToBottom()
-    },
-    [scrollToBottom]
-  )
-
-  // Show first question on mount
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setIsTyping(false)
-      addMsg("lim", QUESTIONS[0].question)
-      setShowOptions(true)
-    }, 900)
-    return () => clearTimeout(t)
-  }, [addMsg])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isTyping, showOptions, scrollToBottom])
-
-  const handleAnswer = useCallback(
-    (optionIdx: number) => {
-      if (locked) return
-      setLocked(true)
-
-      const capturedQ = currentQ
-      const q = QUESTIONS[capturedQ]
-      const score = q.options[optionIdx].score
-      scoresRef.current = [...scoresRef.current, score]
-
-      setShowOptions(false)
-      addMsg("user", q.options[optionIdx].text)
-
-      // Show typing → feedback
-      setTimeout(() => {
-        setIsTyping(true)
-        setTimeout(() => {
-          setIsTyping(false)
-          addMsg("lim", q.feedback[optionIdx])
-
-          const nextIdx = capturedQ + 1
-
-          if (nextIdx < QUESTIONS.length) {
-            // Next question
-            setTimeout(() => {
-              setIsTyping(true)
-              setTimeout(() => {
-                setIsTyping(false)
-                addMsg("lim", QUESTIONS[nextIdx].question)
-                setCurrentQ(nextIdx)
-                setShowOptions(true)
-                setLocked(false)
-              }, 650)
-            }, 950)
-          } else {
-            // Profile done → start compliance flow
-            setTimeout(() => {
-              setIsTyping(true)
-              setTimeout(() => {
-                setIsTyping(false)
-                const cq = COMPLIANCE_QUESTIONS[0]
-                addMsg("lim", cq.question, cq.items)
-                setComplianceStep(0)
-                setShowOptions(true)
-                setLocked(false)
-              }, 700)
-            }, 950)
-          }
-        }, 680)
-      }, 220)
-    },
-    [currentQ, locked, addMsg]
-  )
-
-  const handleComplianceAnswer = useCallback(
-    (optionIdx: number) => {
-      if (locked) return
-      setLocked(true)
-
-      const capturedStep = complianceStep
-      const cq = COMPLIANCE_QUESTIONS[capturedStep]
-      setShowOptions(false)
-      addMsg("user", cq.options[optionIdx])
-
-      setTimeout(() => {
-        setIsTyping(true)
-        setTimeout(() => {
-          setIsTyping(false)
-          const fbIdx = Math.min(optionIdx, cq.feedback.length - 1)
-          addMsg("lim", cq.feedback[fbIdx])
-
-          const nextStep = capturedStep + 1
-
-          if (nextStep < COMPLIANCE_QUESTIONS.length) {
-            setTimeout(() => {
-              setIsTyping(true)
-              setTimeout(() => {
-                setIsTyping(false)
-                const ncq = COMPLIANCE_QUESTIONS[nextStep]
-                addMsg("lim", ncq.question, ncq.items)
-                setComplianceStep(nextStep)
-                setShowOptions(true)
-                setLocked(false)
-              }, 650)
-            }, 950)
-          } else {
-            // All compliance done → result
-            const total = scoresRef.current.reduce((a, b) => a + b, 0)
-            setTimeout(() => {
-              setIsTyping(true)
-              setTimeout(() => {
-                setIsTyping(false)
-                const profile = getProfile(total)
-                addMsg(
-                  "lim",
-                  `¡Perfecto! Ya tengo todo lo que necesito. Tu perfil inversor es ${profile.name} ${profile.emoji}`
-                )
-                setTimeout(() => onResult(total), 1200)
-              }, 700)
-            }, 950)
-          }
-        }, 680)
-      }, 220)
-    },
-    [complianceStep, locked, addMsg, onResult]
-  )
+  const progressPct = isCompliance ? 100 : ((stepIndex + 1) / totalProfile) * 100
 
   return (
     <div className="flex flex-col h-full" style={{ background: "#f5f4f1" }}>
-      {/* Chat header */}
-      <div
-        className="flex items-center justify-between px-4 pt-3 pb-2.5 flex-shrink-0"
-        style={{ borderBottom: "1px solid rgba(28,28,26,0.07)" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <LimAvatar size={38} />
-            <div
-              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-              style={{ background: "#4ade80", borderColor: "#f5f4f1" }}
-            />
-          </div>
-          <p className="text-[14px] font-bold leading-none" style={{ color: "#1c1c1a" }}>
-            Limoncito
-          </p>
-        </div>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-shrink-0">
         <motion.button
           onClick={onClose}
           whileTap={{ scale: 0.9 }}
-          className="w-8 h-8 rounded-full flex items-center justify-center"
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
           style={{ background: "#e5e4e1" }}
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
             <path d="M4 4l8 8M12 4l-8 8" stroke="#1c1c1a" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </motion.button>
-      </div>
 
-      {/* Progress bar */}
-      <div className="px-4 pt-2 pb-1 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "#e5e4e1" }}>
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: "#ddf74c" }}
-              animate={{
-                width: `${((currentQ + (showOptions ? 0 : 1)) / QUESTIONS.length) * 100}%`,
-              }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
+        {/* Progress bar */}
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#e5e4e1" }}>
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "#ddf74c" }}
+            animate={{ width: `${progressPct}%` }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          />
+        </div>
+
+        {!isCompliance && (
           <span
-            className="text-[11px] font-semibold flex-shrink-0"
+            className="text-[12px] font-semibold flex-shrink-0 w-8 text-right"
             style={{ color: "rgba(28,28,26,0.35)" }}
           >
-            {Math.min(currentQ + (showOptions ? 0 : 1), QUESTIONS.length)}/{QUESTIONS.length}
+            {stepIndex + 1}/{totalProfile}
           </span>
-        </div>
+        )}
       </div>
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {messages.map((msg) => (
-          <Bubble key={msg.id} msg={msg} />
-        ))}
-        <AnimatePresence>{isTyping && <TypingBubble />}</AnimatePresence>
-      </div>
-
-      {/* Answer options */}
-      <AnimatePresence>
-        {showOptions && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ type: "spring", stiffness: 340, damping: 32 }}
-            className="flex-shrink-0 px-4 pt-2 pb-5 flex flex-col gap-2"
-            style={{ borderTop: "1px solid rgba(28,28,26,0.07)" }}
+      {/* Animated question area */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={stepIndex}
+          initial={{ x: 32, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -24, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 420, damping: 38 }}
+          className="flex-1 overflow-y-auto px-5 pt-2 pb-6 flex flex-col"
+        >
+          {/* Section label */}
+          <p
+            className="text-[11px] font-semibold uppercase tracking-widest mb-4"
+            style={{ color: "rgba(28,28,26,0.35)" }}
           >
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider pt-1 pb-0.5 text-right"
-              style={{ color: "rgba(28,28,26,0.3)" }}
-            >
-              Tu respuesta
-            </p>
+            {isCompliance ? "Cumplimiento regulatorio" : `Pregunta ${stepIndex + 1} de ${totalProfile}`}
+          </p>
 
-            {complianceStep === -1 ? (
-              /* ── Profile question options ── */
-              QUESTIONS[currentQ].options.map((opt, i) => (
-                <motion.button
+          {/* Question text */}
+          <h2 className="text-[22px] font-extrabold leading-snug mb-6" style={{ color: "#1c1c1a" }}>
+            {currentQ?.question ?? currentCQ?.question}
+          </h2>
+
+          {/* Bullet items (compliance) */}
+          {currentCQ?.items && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="mb-5 rounded-2xl overflow-hidden"
+              style={{ background: "#e5e4e1" }}
+            >
+              {currentCQ.items.map((item, i) => (
+                <div
                   key={i}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                  onClick={() => handleAnswer(i)}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full text-left px-4 py-3 text-[13px] font-medium leading-snug"
+                  className="flex items-start gap-2.5 px-4 py-3"
                   style={{
-                    background: "#e5e4e1",
-                    color: "#1c1c1a",
-                    borderRadius: "14px 14px 4px 14px",
-                    border: "1.5px solid rgba(28,28,26,0.08)",
+                    borderBottom:
+                      i < (currentCQ.items?.length ?? 0) - 1
+                        ? "1px solid rgba(28,28,26,0.07)"
+                        : "none",
                   }}
                 >
-                  {opt.text}
+                  <span
+                    className="text-[10px] font-bold mt-1 flex-shrink-0"
+                    style={{ color: "rgba(28,28,26,0.35)" }}
+                  >
+                    •
+                  </span>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "#1c1c1a" }}>
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </motion.div>
+          )}
+
+          {/* W-8BEN cert text */}
+          {"certText" in (currentCQ ?? {}) && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="mb-5 px-4 py-3.5 rounded-2xl"
+              style={{ background: "#e5e4e1", border: "1.5px solid rgba(28,28,26,0.08)" }}
+            >
+              <p className="text-[12px] leading-relaxed" style={{ color: "rgba(28,28,26,0.6)" }}>
+                {(currentCQ as typeof COMPLIANCE_QUESTIONS[2]).certText}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Answer options */}
+          <div className="flex flex-col gap-2.5 mt-auto">
+            {options.map((text, i) => {
+              const isSelected = selected === i
+              return (
+                <motion.button
+                  key={i}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 + i * 0.06 }}
+                  onClick={() => handleSelect(i)}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full text-left px-4 py-4 rounded-2xl flex items-center justify-between gap-3 transition-colors"
+                  style={{
+                    background: isSelected ? "#1c1c1a" : "#e5e4e1",
+                    border: isSelected ? "none" : "1.5px solid rgba(28,28,26,0.07)",
+                  }}
+                >
+                  <span
+                    className="text-[14px] font-medium leading-snug"
+                    style={{ color: isSelected ? "#ffffff" : "#1c1c1a" }}
+                  >
+                    {text}
+                  </span>
+                  <AnimatePresence>
+                    {isSelected && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: "#ddf74c" }}
+                      >
+                        <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                          <path
+                            d="M2 6l3 3 5-5"
+                            stroke="#1c1c1a"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </motion.button>
-              ))
-            ) : (
-              /* ── Compliance options ── */
-              <>
-                {/* W-8BEN cert text card */}
-                {"certText" in COMPLIANCE_QUESTIONS[complianceStep] && (
-                  <div
-                    className="px-3.5 py-3 mb-1 rounded-2xl"
-                    style={{ background: "#e5e4e1", border: "1.5px solid rgba(28,28,26,0.08)" }}
-                  >
-                    <p className="text-[11px] leading-relaxed" style={{ color: "rgba(28,28,26,0.65)" }}>
-                      {(COMPLIANCE_QUESTIONS[complianceStep] as typeof COMPLIANCE_QUESTIONS[2]).certText}
-                    </p>
-                  </div>
-                )}
-                {COMPLIANCE_QUESTIONS[complianceStep].options.map((opt, i) => (
-                  <motion.button
-                    key={i}
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    onClick={() => handleComplianceAnswer(i)}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full text-left px-4 py-3 text-[13px] font-medium leading-snug"
-                    style={{
-                      background: i === 0 ? "#1c1c1a" : "#e5e4e1",
-                      color: i === 0 ? "#ffffff" : "#1c1c1a",
-                      borderRadius: "14px 14px 4px 14px",
-                      border: "1.5px solid rgba(28,28,26,0.08)",
-                    }}
-                  >
-                    {opt}
-                  </motion.button>
-                ))}
-              </>
-            )}
-          </motion.div>
-        )}
+              )
+            })}
+          </div>
+        </motion.div>
       </AnimatePresence>
     </div>
   )
@@ -667,42 +433,17 @@ function ResultScreen({
 
   return (
     <div className="absolute inset-0 overflow-y-auto" style={{ background: "#f5f4f1" }}>
-      <div className="flex flex-col items-center px-6 pt-6 pb-6 gap-4 min-h-full">
-        {/* Limoncito + speech bubble */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.45 }}
-          className="flex items-end gap-3 w-full"
-        >
-          <img
-            src={LIMONCITO}
-            alt="Limoncito"
-            className="w-16 h-16 object-contain flex-shrink-0"
-            style={{ mixBlendMode: "multiply" }}
-          />
-          <div
-            className="flex-1 px-4 py-3 text-[14px] leading-relaxed font-medium"
-            style={{
-              background: "#e5e4e1",
-              color: "#1c1c1a",
-              borderRadius: "16px 16px 16px 4px",
-            }}
-          >
-            ¡Listo! Según tus respuestas, sos un inversor{" "}
-            <strong>{profile.name}</strong> {profile.emoji}
-          </div>
-        </motion.div>
+      <div className="flex flex-col items-center px-6 pt-8 pb-8 gap-5 min-h-full">
 
         {/* Profile badge */}
         <motion.div
-          initial={{ scale: 0.88, opacity: 0 }}
+          initial={{ scale: 0.82, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.25, type: "spring", stiffness: 280, damping: 24 }}
+          transition={{ delay: 0.1, type: "spring", stiffness: 280, damping: 22 }}
           className="flex flex-col items-center gap-1"
         >
           <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl relative"
+            className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl relative"
             style={{ background: profile.bg, border: `2px solid ${profile.color}20` }}
           >
             {profile.emoji}
@@ -714,15 +455,12 @@ function ResultScreen({
             </div>
           </div>
           <p
-            className="text-[11px] font-semibold uppercase tracking-widest mt-2"
+            className="text-[11px] font-semibold uppercase tracking-widest mt-3"
             style={{ color: "rgba(28,28,26,0.4)" }}
           >
             Tu perfil inversor
           </p>
-          <h1
-            className="text-[30px] font-extrabold leading-none"
-            style={{ color: "#1c1c1a" }}
-          >
+          <h1 className="text-[32px] font-extrabold leading-none" style={{ color: "#1c1c1a" }}>
             {profile.name}
           </h1>
           <div
@@ -740,7 +478,7 @@ function ResultScreen({
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.35 }}
+          transition={{ delay: 0.28 }}
           className="rounded-2xl px-4 py-3.5 w-full"
           style={{ background: "#e5e4e1" }}
         >
@@ -756,7 +494,7 @@ function ResultScreen({
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.35 }}
+          transition={{ delay: 0.38 }}
           className="w-full"
         >
           <p
@@ -771,7 +509,7 @@ function ResultScreen({
                 key={i}
                 initial={{ x: -8, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.55 + i * 0.07 }}
+                transition={{ delay: 0.44 + i * 0.07 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                 style={{ background: "#e5e4e1" }}
               >
@@ -791,7 +529,7 @@ function ResultScreen({
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75, duration: 0.4 }}
+          transition={{ delay: 0.62 }}
           className="w-full mt-auto pt-2"
         >
           <motion.button
@@ -811,18 +549,13 @@ function ResultScreen({
 
 // ── Main Component ─────────────────────────────────────────────
 
-export type OnboardingScreen =
-  | { type: "intro" }
-  | { type: "question"; index: number; scores: number[] }
-  | { type: "result"; score: number }
-
 interface Props {
   onComplete: () => void
   onGoToMercado: (profileName: string) => void
   onClose: () => void
 }
 
-type Phase = "intro" | "chat" | "result"
+type Phase = "intro" | "quiz" | "result"
 
 export default function InversionesOnboarding({ onComplete, onGoToMercado, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>("intro")
@@ -837,23 +570,23 @@ export default function InversionesOnboarding({ onComplete, onGoToMercado, onClo
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ x: "-40%", opacity: 0 }}
-            transition={{ duration: 0.26 }}
+            transition={{ duration: 0.24 }}
             className="absolute inset-0"
           >
-            <IntroScreen onStart={() => setPhase("chat")} onClose={onClose} />
+            <IntroScreen onStart={() => setPhase("quiz")} onClose={onClose} />
           </motion.div>
         )}
 
-        {phase === "chat" && (
+        {phase === "quiz" && (
           <motion.div
-            key="chat"
+            key="quiz"
             initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "-40%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 40 }}
             className="absolute inset-0"
           >
-            <ChatScreen
+            <QuizScreen
               onResult={(score) => {
                 setFinalScore(score)
                 setPhase("result")
