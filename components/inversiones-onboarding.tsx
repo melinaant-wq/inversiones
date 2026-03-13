@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, Sparkles, TrendingUp, Shield, Zap } from "lucide-react"
 
@@ -17,6 +17,11 @@ const QUESTIONS = [
       { text: "Probé alguna vez, pero no lo hago seguido", score: 2 },
       { text: "Invierto regularmente", score: 3 },
     ],
+    feedback: [
+      "¡Qué bueno que te animás a dar el primer paso! Todos empezamos de cero.",
+      "Buenísimo, ya diste tus primeros pasos. Vamos a convertir eso en un hábito.",
+      "¡Genial! Ya tenés cancha en esto. Vamos a potenciar lo que ya sabés.",
+    ],
   },
   {
     id: 2,
@@ -25,6 +30,11 @@ const QUESTIONS = [
       { text: "Proteger mis ahorros de la inflación", score: 1 },
       { text: "Hacer crecer mi dinero a mediano plazo", score: 2 },
       { text: "Maximizar ganancias aunque implique más riesgo", score: 3 },
+    ],
+    feedback: [
+      "Te entiendo. Cuidar lo que te costó ganar es la prioridad número uno.",
+      "Esa es la actitud. Hacer que el dinero trabaje para vos a mediano plazo es la base de todo.",
+      "¡Me gusta ese perfil! Busquemos esas oportunidades con mayor potencial.",
     ],
   },
   {
@@ -35,6 +45,11 @@ const QUESTIONS = [
       { text: "Entre 1 y 3 años", score: 2 },
       { text: "Más de 3 años", score: 3 },
     ],
+    feedback: [
+      "Claro, mantener la liquidez es clave cuando necesitás el dinero pronto.",
+      "Un plazo de 1 a 3 años es ideal para que el interés compuesto empiece a hacer su magia.",
+      "¡El tiempo es tu mejor aliado! Con ese horizonte se pueden buscar retornos mucho mejores.",
+    ],
   },
   {
     id: 4,
@@ -43,6 +58,11 @@ const QUESTIONS = [
       { text: "Vendo todo para no perder más", score: 1 },
       { text: "Espero a que se recupere", score: 2 },
       { text: "Aprovecho y compro más barato", score: 3 },
+    ],
+    feedback: [
+      "Es normal sentir ese miedo. Por eso armamos un perfil que te permita estar tranquilo.",
+      "Tenés temple. Entender que el mercado tiene ciclos es fundamental para invertir bien.",
+      "¡Esa es la mirada de oportunidad! Es lo que separa a los inversores estratégicos.",
     ],
   },
   {
@@ -53,33 +73,44 @@ const QUESTIONS = [
       { text: "Una parte significativa (20% – 50%)", score: 2 },
       { text: "La mayor parte (más del 50%)", score: 3 },
     ],
+    feedback: [
+      "Muy prudente para empezar. Siempre es mejor ir de a poco y ganar confianza.",
+      "Un equilibrio sólido. Ese capital bien invertido empieza a mover la aguja de tus finanzas.",
+      "¡Estás 100% comprometido con tu futuro! Vamos a asegurarnos de que esté bien diversificado.",
+    ],
   },
 ]
 
 const COMPLIANCE_QUESTIONS = [
   {
     id: "pep",
-    question: "¿Alguna de estas situaciones te aplica?",
+    question: "Antes de terminar, necesito consultarte un par de cosas.",
+    subtitle: "¿Alguna de estas situaciones te aplica?",
     items: [
       "Soy Director Senior de una empresa que cotiza en bolsa",
       "Poseo más del 10% de una empresa que cotiza en bolsa",
       "Trabajo para un corredor de bolsa de EE.UU.",
     ] as readonly string[],
     options: ["Ninguna de las anteriores", "Sí, alguna aplica"] as readonly string[],
+    feedback: ["Gracias, anotado. Casi terminamos.", "Entendido, lo tenemos en cuenta."],
   },
   {
     id: "usTax",
     question: "¿Sos ciudadano o residente fiscal de EE.UU.?",
+    subtitle: undefined as string | undefined,
     items: undefined as readonly string[] | undefined,
-    options: ["No, no tengo obligaciones fiscales en EE.UU.", "Sí, estoy sujeto a impuestos en EE.UU."] as readonly string[],
+    options: ["No tengo obligaciones fiscales en EE.UU.", "Sí, estoy sujeto a impuestos en EE.UU."] as readonly string[],
+    feedback: ["Perfecto. Último paso.", "Registrado. Igual necesitamos el W-8BEN."],
   },
   {
     id: "w8ben",
-    question: "Último paso: confirmá tu declaración",
+    question: "Confirmá tu declaración para terminar.",
+    subtitle: undefined as string | undefined,
     items: undefined as readonly string[] | undefined,
     certText:
       "Certifico que no soy ciudadano de EE. UU., residente extranjero en EE. UU. ni otra persona sujeta a impuestos en EE. UU., y estoy presentando el formulario W-8BEN para certificar mi condición de extranjero.",
     options: ["Confirmar y continuar"] as readonly string[],
+    feedback: ["¡Listo! Ya tengo todo lo que necesito."],
   },
 ] as const
 
@@ -119,6 +150,24 @@ function getProfile(score: number) {
   }
 }
 
+// ── Limoncito Avatar ───────────────────────────────────────────
+
+function LimAvatar({ size = 72 }: { size?: number }) {
+  return (
+    <img
+      src={LIMONCITO}
+      alt="Limoncito"
+      style={{
+        width: size,
+        height: size,
+        objectFit: "contain",
+        mixBlendMode: "multiply",
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
 // ── Intro Screen ───────────────────────────────────────────────
 
 function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () => void }) {
@@ -137,51 +186,43 @@ function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () =>
         </motion.button>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center px-6 gap-6">
-        {/* Limoncito mascot — small, not chatty */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 280, damping: 20, delay: 0.05 }}
-          className="flex justify-center"
         >
-          <img
-            src={LIMONCITO}
-            alt="Limoncito"
-            className="w-20 h-20 object-contain"
-            style={{ mixBlendMode: "multiply" }}
-          />
+          <LimAvatar size={96} />
         </motion.div>
 
-        {/* Copy */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
           className="text-center"
         >
-          <h1 className="text-[26px] font-extrabold leading-tight mb-2" style={{ color: "#1c1c1a" }}>
-            Descubrí tu perfil<br />inversor
+          <h1 className="text-[24px] font-extrabold leading-tight mb-2" style={{ color: "#1c1c1a" }}>
+            Hola, soy Limoncito 🍋
           </h1>
           <p className="text-[14px] leading-relaxed" style={{ color: "rgba(28,28,26,0.55)" }}>
-            5 preguntas para mostrarte las opciones del mercado que mejor se adaptan a vos.
+            Te voy a hacer <strong style={{ color: "#1c1c1a" }}>5 preguntas cortas</strong> para armar
+            tu perfil inversor y mostrarte las mejores opciones para vos.
           </p>
         </motion.div>
 
-        {/* Tags */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.32 }}
-          className="flex gap-2 justify-center"
+          transition={{ delay: 0.3 }}
+          className="flex gap-2"
         >
-          {["5 preguntas", "Menos de 2 min", "Personalizado"].map((t) => (
+          {["Personalizado", "Menos de 2 min"].map((t) => (
             <span
               key={t}
               className="text-[12px] font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: "#e5e4e1", color: "rgba(28,28,26,0.65)" }}
+              style={{ background: "#ddf74c", color: "#1c1c1a" }}
             >
-              {t}
+              ✓ {t}
             </span>
           ))}
         </motion.div>
@@ -190,7 +231,7 @@ function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () =>
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.42 }}
+        transition={{ delay: 0.4 }}
         className="px-6 pb-8"
       >
         <motion.button
@@ -207,7 +248,28 @@ function IntroScreen({ onStart, onClose }: { onStart: () => void; onClose: () =>
   )
 }
 
+// ── Auto-advance progress bar ──────────────────────────────────
+
+function AutoProgressBar({ duration }: { duration: number }) {
+  return (
+    <div
+      className="w-full h-0.5 rounded-full overflow-hidden"
+      style={{ background: "rgba(28,28,26,0.1)" }}
+    >
+      <motion.div
+        className="h-full rounded-full"
+        style={{ background: "#1c1c1a" }}
+        initial={{ width: "0%" }}
+        animate={{ width: "100%" }}
+        transition={{ duration: duration / 1000, ease: "linear" }}
+      />
+    </div>
+  )
+}
+
 // ── Quiz Screen ────────────────────────────────────────────────
+
+type QuizPhase = "question" | "reaction"
 
 function QuizScreen({
   onResult,
@@ -221,38 +283,52 @@ function QuizScreen({
   const totalSteps = totalProfile + totalCompliance
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [selected, setSelected] = useState<number | null>(null)
+  const [quizPhase, setQuizPhase] = useState<QuizPhase>("question")
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const scoresRef = useRef<number[]>([])
+  const REACTION_DURATION = 1800
 
   const isCompliance = stepIndex >= totalProfile
-  const profileIdx = stepIndex
-  const complianceIdx = stepIndex - totalProfile
+  const currentQ = !isCompliance ? QUESTIONS[stepIndex] : null
+  const currentCQ = isCompliance ? COMPLIANCE_QUESTIONS[stepIndex - totalProfile] : null
 
-  const currentQ = !isCompliance ? QUESTIONS[profileIdx] : null
-  const currentCQ = isCompliance ? COMPLIANCE_QUESTIONS[complianceIdx] : null
   const options: readonly string[] = currentQ
     ? currentQ.options.map((o) => o.text)
     : currentCQ?.options ?? []
 
-  const handleSelect = (optionIdx: number) => {
-    if (selected !== null) return
-    setSelected(optionIdx)
+  const reactionText =
+    selectedIdx !== null
+      ? currentQ
+        ? currentQ.feedback[selectedIdx]
+        : currentCQ?.feedback[Math.min(selectedIdx, currentCQ.feedback.length - 1)] ?? ""
+      : ""
 
-    if (currentQ) {
-      scoresRef.current.push(currentQ.options[optionIdx].score)
+  const advance = () => {
+    const next = stepIndex + 1
+    if (next >= totalSteps) {
+      const total = scoresRef.current.reduce((a, b) => a + b, 0)
+      onResult(total)
+    } else {
+      setStepIndex(next)
+      setSelectedIdx(null)
+      setQuizPhase("question")
     }
-
-    setTimeout(() => {
-      const next = stepIndex + 1
-      if (next >= totalSteps) {
-        const total = scoresRef.current.reduce((a, b) => a + b, 0)
-        onResult(total)
-      } else {
-        setStepIndex(next)
-        setSelected(null)
-      }
-    }, 280)
   }
+
+  const handleSelect = (optionIdx: number) => {
+    if (quizPhase !== "question") return
+    if (currentQ) scoresRef.current.push(currentQ.options[optionIdx].score)
+    setSelectedIdx(optionIdx)
+    setQuizPhase("reaction")
+  }
+
+  // Auto-advance from reaction
+  useEffect(() => {
+    if (quizPhase !== "reaction") return
+    const t = setTimeout(advance, REACTION_DURATION)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizPhase, stepIndex])
 
   const progressPct = isCompliance ? 100 : ((stepIndex + 1) / totalProfile) * 100
 
@@ -271,7 +347,6 @@ function QuizScreen({
           </svg>
         </motion.button>
 
-        {/* Progress bar */}
         <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#e5e4e1" }}>
           <motion.div
             className="h-full rounded-full"
@@ -283,7 +358,7 @@ function QuizScreen({
 
         {!isCompliance && (
           <span
-            className="text-[12px] font-semibold flex-shrink-0 w-8 text-right"
+            className="text-[12px] font-semibold flex-shrink-0"
             style={{ color: "rgba(28,28,26,0.35)" }}
           >
             {stepIndex + 1}/{totalProfile}
@@ -291,129 +366,163 @@ function QuizScreen({
         )}
       </div>
 
-      {/* Animated question area */}
+      {/* Main content — animated between question and reaction */}
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={stepIndex}
-          initial={{ x: 32, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -24, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 420, damping: 38 }}
-          className="flex-1 overflow-y-auto px-5 pt-2 pb-6 flex flex-col"
-        >
-          {/* Section label */}
-          <p
-            className="text-[11px] font-semibold uppercase tracking-widest mb-4"
-            style={{ color: "rgba(28,28,26,0.35)" }}
+
+        {/* ── REACTION phase ── */}
+        {quizPhase === "reaction" && (
+          <motion.div
+            key={`reaction-${stepIndex}`}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.22 }}
+            className="flex-1 flex flex-col items-center justify-center px-6 gap-5"
+            onClick={advance}
+            style={{ cursor: "pointer" }}
           >
-            {isCompliance ? "Cumplimiento regulatorio" : `Pregunta ${stepIndex + 1} de ${totalProfile}`}
-          </p>
-
-          {/* Question text */}
-          <h2 className="text-[22px] font-extrabold leading-snug mb-6" style={{ color: "#1c1c1a" }}>
-            {currentQ?.question ?? currentCQ?.question}
-          </h2>
-
-          {/* Bullet items (compliance) */}
-          {currentCQ?.items && (
             <motion.div
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.04 }}
+            >
+              <LimAvatar size={88} />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08 }}
-              className="mb-5 rounded-2xl overflow-hidden"
+              transition={{ delay: 0.1 }}
+              className="w-full px-5 py-4 rounded-2xl"
               style={{ background: "#e5e4e1" }}
             >
-              {currentCQ.items.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2.5 px-4 py-3"
-                  style={{
-                    borderBottom:
-                      i < (currentCQ.items?.length ?? 0) - 1
-                        ? "1px solid rgba(28,28,26,0.07)"
-                        : "none",
-                  }}
-                >
-                  <span
-                    className="text-[10px] font-bold mt-1 flex-shrink-0"
-                    style={{ color: "rgba(28,28,26,0.35)" }}
-                  >
-                    •
-                  </span>
-                  <p className="text-[13px] leading-relaxed" style={{ color: "#1c1c1a" }}>
-                    {item}
-                  </p>
-                </div>
-              ))}
-            </motion.div>
-          )}
-
-          {/* W-8BEN cert text */}
-          {"certText" in (currentCQ ?? {}) && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08 }}
-              className="mb-5 px-4 py-3.5 rounded-2xl"
-              style={{ background: "#e5e4e1", border: "1.5px solid rgba(28,28,26,0.08)" }}
-            >
-              <p className="text-[12px] leading-relaxed" style={{ color: "rgba(28,28,26,0.6)" }}>
-                {(currentCQ as typeof COMPLIANCE_QUESTIONS[2]).certText}
+              <p
+                className="text-[16px] font-semibold leading-snug text-center"
+                style={{ color: "#1c1c1a" }}
+              >
+                {reactionText}
               </p>
             </motion.div>
-          )}
 
-          {/* Answer options */}
-          <div className="flex flex-col gap-2.5 mt-auto">
-            {options.map((text, i) => {
-              const isSelected = selected === i
-              return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="w-full"
+            >
+              <AutoProgressBar duration={REACTION_DURATION} />
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* ── QUESTION phase ── */}
+        {quizPhase === "question" && (
+          <motion.div
+            key={`question-${stepIndex}`}
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ type: "spring", stiffness: 400, damping: 36 }}
+            className="flex-1 overflow-y-auto px-5 pt-2 pb-6 flex flex-col"
+          >
+            {/* Limoncito + speech bubble */}
+            <div className="flex items-end gap-3 mb-5">
+              <div className="flex-shrink-0">
+                <LimAvatar size={56} />
+              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 }}
+                className="flex-1 px-4 py-3 rounded-2xl"
+                style={{
+                  background: "#e5e4e1",
+                  borderRadius: "16px 16px 16px 4px",
+                }}
+              >
+                {isCompliance && currentCQ && (
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "rgba(28,28,26,0.4)" }}>
+                    Cumplimiento regulatorio
+                  </p>
+                )}
+                <p className="text-[15px] font-bold leading-snug" style={{ color: "#1c1c1a" }}>
+                  {currentQ?.question ?? currentCQ?.question}
+                </p>
+                {currentCQ && "subtitle" in currentCQ && currentCQ.subtitle && (
+                  <p className="text-[13px] mt-1 leading-snug" style={{ color: "rgba(28,28,26,0.6)" }}>
+                    {currentCQ.subtitle}
+                  </p>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Compliance bullet items */}
+            {currentCQ?.items && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.14 }}
+                className="mb-4 rounded-2xl overflow-hidden"
+                style={{ background: "rgba(28,28,26,0.05)", border: "1.5px solid rgba(28,28,26,0.07)" }}
+              >
+                {currentCQ.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-2.5 px-4 py-2.5"
+                    style={{
+                      borderBottom: i < (currentCQ.items?.length ?? 0) - 1
+                        ? "1px solid rgba(28,28,26,0.07)"
+                        : "none",
+                    }}
+                  >
+                    <span className="text-[10px] font-bold mt-1 flex-shrink-0" style={{ color: "rgba(28,28,26,0.3)" }}>•</span>
+                    <p className="text-[13px] leading-relaxed" style={{ color: "#1c1c1a" }}>{item}</p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
+            {/* W-8BEN cert text */}
+            {"certText" in (currentCQ ?? {}) && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.14 }}
+                className="mb-4 px-4 py-3.5 rounded-2xl"
+                style={{ background: "rgba(28,28,26,0.05)", border: "1.5px solid rgba(28,28,26,0.07)" }}
+              >
+                <p className="text-[12px] leading-relaxed" style={{ color: "rgba(28,28,26,0.6)" }}>
+                  {(currentCQ as typeof COMPLIANCE_QUESTIONS[2]).certText}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Options */}
+            <div className="flex flex-col gap-2.5 mt-2">
+              {options.map((text, i) => (
                 <motion.button
                   key={i}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 + i * 0.06 }}
+                  transition={{ delay: 0.1 + i * 0.07 }}
                   onClick={() => handleSelect(i)}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full text-left px-4 py-4 rounded-2xl flex items-center justify-between gap-3 transition-colors"
+                  className="w-full text-left px-4 py-3.5 rounded-2xl flex items-center justify-between gap-3"
                   style={{
-                    background: isSelected ? "#1c1c1a" : "#e5e4e1",
-                    border: isSelected ? "none" : "1.5px solid rgba(28,28,26,0.07)",
+                    background: "#e5e4e1",
+                    border: "1.5px solid rgba(28,28,26,0.07)",
                   }}
                 >
-                  <span
-                    className="text-[14px] font-medium leading-snug"
-                    style={{ color: isSelected ? "#ffffff" : "#1c1c1a" }}
-                  >
+                  <span className="text-[14px] font-medium leading-snug" style={{ color: "#1c1c1a" }}>
                     {text}
                   </span>
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: "#ddf74c" }}
-                      >
-                        <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
-                          <path
-                            d="M2 6l3 3 5-5"
-                            stroke="#1c1c1a"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(28,28,26,0.25)" }} />
                 </motion.button>
-              )
-            })}
-          </div>
-        </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
       </AnimatePresence>
     </div>
   )
@@ -435,11 +544,28 @@ function ResultScreen({
     <div className="absolute inset-0 overflow-y-auto" style={{ background: "#f5f4f1" }}>
       <div className="flex flex-col items-center px-6 pt-8 pb-8 gap-5 min-h-full">
 
+        {/* Limoncito + message */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="flex items-end gap-3 w-full"
+        >
+          <LimAvatar size={56} />
+          <div
+            className="flex-1 px-4 py-3 text-[14px] font-semibold leading-snug"
+            style={{ background: "#e5e4e1", borderRadius: "16px 16px 16px 4px", color: "#1c1c1a" }}
+          >
+            ¡Listo! Según tus respuestas, sos un inversor{" "}
+            <strong>{profile.name}</strong> {profile.emoji}
+          </div>
+        </motion.div>
+
         {/* Profile badge */}
         <motion.div
-          initial={{ scale: 0.82, opacity: 0 }}
+          initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, type: "spring", stiffness: 280, damping: 22 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 280, damping: 22 }}
           className="flex flex-col items-center gap-1"
         >
           <div
@@ -454,19 +580,13 @@ function ResultScreen({
               <Sparkles className="w-3.5 h-3.5" style={{ color: "#1c1c1a" }} />
             </div>
           </div>
-          <p
-            className="text-[11px] font-semibold uppercase tracking-widest mt-3"
-            style={{ color: "rgba(28,28,26,0.4)" }}
-          >
+          <p className="text-[11px] font-semibold uppercase tracking-widest mt-3" style={{ color: "rgba(28,28,26,0.4)" }}>
             Tu perfil inversor
           </p>
           <h1 className="text-[32px] font-extrabold leading-none" style={{ color: "#1c1c1a" }}>
             {profile.name}
           </h1>
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full mt-1"
-            style={{ background: "#e5e4e1" }}
-          >
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full mt-1" style={{ background: "#e5e4e1" }}>
             <ProfileIcon className="w-3.5 h-3.5" style={{ color: profile.color }} />
             <span className="text-[11px] font-semibold" style={{ color: "#1c1c1a" }}>
               Puntaje: {score}/15
@@ -478,14 +598,11 @@ function ResultScreen({
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.28 }}
+          transition={{ delay: 0.32 }}
           className="rounded-2xl px-4 py-3.5 w-full"
           style={{ background: "#e5e4e1" }}
         >
-          <p
-            className="text-[13px] leading-relaxed text-center"
-            style={{ color: "rgba(28,28,26,0.75)" }}
-          >
+          <p className="text-[13px] leading-relaxed text-center" style={{ color: "rgba(28,28,26,0.75)" }}>
             {profile.description}
           </p>
         </motion.div>
@@ -494,13 +611,10 @@ function ResultScreen({
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.38 }}
+          transition={{ delay: 0.42 }}
           className="w-full"
         >
-          <p
-            className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 text-center"
-            style={{ color: "rgba(28,28,26,0.4)" }}
-          >
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 text-center" style={{ color: "rgba(28,28,26,0.4)" }}>
             Te recomendamos
           </p>
           <div className="flex flex-col gap-2">
@@ -509,17 +623,12 @@ function ResultScreen({
                 key={i}
                 initial={{ x: -8, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.44 + i * 0.07 }}
+                transition={{ delay: 0.48 + i * 0.07 }}
                 className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                 style={{ background: "#e5e4e1" }}
               >
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: profile.color }}
-                />
-                <span className="text-[13px] font-medium" style={{ color: "#1c1c1a" }}>
-                  {tip}
-                </span>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: profile.color }} />
+                <span className="text-[13px] font-medium" style={{ color: "#1c1c1a" }}>{tip}</span>
               </motion.div>
             ))}
           </div>
@@ -529,7 +638,7 @@ function ResultScreen({
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.62 }}
+          transition={{ delay: 0.65 }}
           className="w-full mt-auto pt-2"
         >
           <motion.button
