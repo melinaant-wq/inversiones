@@ -150,6 +150,24 @@ function getProfile(score: number) {
   }
 }
 
+// ── Typing dots ────────────────────────────────────────────────
+
+function TypingDots() {
+  return (
+    <div className="flex gap-1.5 items-center py-1 px-0.5">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="w-2 h-2 rounded-full"
+          style={{ background: "rgba(28,28,26,0.35)" }}
+          animate={{ y: [0, -5, 0] }}
+          transition={{ repeat: Infinity, duration: 0.65, delay: i * 0.14, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
+  )
+}
+
 // ── Limoncito Avatar ───────────────────────────────────────────
 
 function LimAvatar({ size = 72 }: { size?: number }) {
@@ -269,7 +287,8 @@ function AutoProgressBar({ duration }: { duration: number }) {
 
 // ── Quiz Screen ────────────────────────────────────────────────
 
-type QuizPhase = "question" | "reaction"
+type QuizPhase = "typing" | "question" | "reaction"
+const TYPING_DURATION = 750
 
 function QuizScreen({
   onResult,
@@ -283,7 +302,7 @@ function QuizScreen({
   const totalSteps = totalProfile + totalCompliance
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [quizPhase, setQuizPhase] = useState<QuizPhase>("question")
+  const [quizPhase, setQuizPhase] = useState<QuizPhase>("typing")
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const scoresRef = useRef<number[]>([])
   const REACTION_DURATION = 1800
@@ -311,7 +330,7 @@ function QuizScreen({
     } else {
       setStepIndex(next)
       setSelectedIdx(null)
-      setQuizPhase("question")
+      setQuizPhase("typing")
     }
   }
 
@@ -321,6 +340,13 @@ function QuizScreen({
     setSelectedIdx(optionIdx)
     setQuizPhase("reaction")
   }
+
+  // Auto-advance from typing → question
+  useEffect(() => {
+    if (quizPhase !== "typing") return
+    const t = setTimeout(() => setQuizPhase("question"), TYPING_DURATION)
+    return () => clearTimeout(t)
+  }, [quizPhase, stepIndex])
 
   // Auto-advance from reaction
   useEffect(() => {
@@ -366,8 +392,30 @@ function QuizScreen({
         )}
       </div>
 
-      {/* Main content — animated between question and reaction */}
+      {/* Main content — animated between typing / question / reaction */}
       <AnimatePresence mode="wait" initial={false}>
+
+        {/* ── TYPING phase ── */}
+        {quizPhase === "typing" && (
+          <motion.div
+            key={`typing-${stepIndex}`}
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ type: "spring", stiffness: 400, damping: 36 }}
+            className="flex-1 px-5 pt-2 pb-6"
+          >
+            <div className="flex items-end gap-3">
+              <LimAvatar size={56} />
+              <div
+                className="px-4 py-3 rounded-2xl"
+                style={{ background: "#e5e4e1", borderRadius: "16px 16px 16px 4px" }}
+              >
+                <TypingDots />
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── REACTION phase ── */}
         {quizPhase === "reaction" && (
@@ -377,38 +425,37 @@ function QuizScreen({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.22 }}
-            className="flex-1 flex flex-col items-center justify-center px-6 gap-5"
+            className="flex-1 flex flex-col px-5 pt-2 pb-6 gap-4"
             onClick={advance}
             style={{ cursor: "pointer" }}
           >
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.04 }}
-            >
-              <LimAvatar size={88} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="w-full px-5 py-4 rounded-2xl"
-              style={{ background: "#e5e4e1" }}
-            >
-              <p
-                className="text-[16px] font-semibold leading-snug text-center"
-                style={{ color: "#1c1c1a" }}
+            <div className="flex items-end gap-3">
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 22 }}
               >
-                {reactionText}
-              </p>
-            </motion.div>
+                <LimAvatar size={72} />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 }}
+                className="flex-1 px-4 py-3.5 rounded-2xl"
+                style={{ background: "#e5e4e1", borderRadius: "16px 16px 16px 4px" }}
+              >
+                <p className="text-[15px] font-semibold leading-snug" style={{ color: "#1c1c1a" }}>
+                  {reactionText}
+                </p>
+              </motion.div>
+            </div>
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="w-full"
+              transition={{ delay: 0.25 }}
+              className="ml-[68px]"
             >
               <AutoProgressBar duration={REACTION_DURATION} />
             </motion.div>
@@ -516,7 +563,6 @@ function QuizScreen({
                   <span className="text-[14px] font-medium leading-snug" style={{ color: "#1c1c1a" }}>
                     {text}
                   </span>
-                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "rgba(28,28,26,0.25)" }} />
                 </motion.button>
               ))}
             </div>
