@@ -95,7 +95,7 @@ export default function PortfolioScreen({
   onOpenInvestments?: () => void
   onOpenCash?: () => void
 }) {
-  const { hasInvestments } = useUserConfig()
+  const { hasInvestments, profileComplete, profileName } = useUserConfig()
   const [view, setView] = useState<ViewMode>("lista")
   const [timeRange, setTimeRange] = useState<TimeRange>("1M")
   const [scrubX, setScrubX] = useState<number | null>(null)
@@ -199,27 +199,49 @@ export default function PortfolioScreen({
                     )}
                   </div>
 
-                  {/* New user: profile prompt */}
+                  {/* New user: profile prompt or start investing CTA */}
                   {showProfilePrompt ? (
                     <div className="flex items-center gap-2.5 mt-2.5">
-                      {/* target / radio icon */}
                       <div
                         className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
                         style={{ background: "rgba(28,28,26,0.08)" }}
                       >
-                        <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
-                          <circle cx="10" cy="10" r="7.5" stroke="#1c1c1a" strokeWidth="1.5" />
-                          <circle cx="10" cy="10" r="4" stroke="#1c1c1a" strokeWidth="1.5" />
-                          <circle cx="10" cy="10" r="1.5" fill="#1c1c1a" />
-                        </svg>
+                        {profileComplete ? (
+                          /* rocket icon */
+                          <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
+                            <path d="M10 2.5C10 2.5 6 6 6 11h8c0-5-4-8.5-4-8.5Z" stroke="#1c1c1a" strokeWidth="1.5" strokeLinejoin="round" />
+                            <path d="M7 11v3.5a3 3 0 006 0V11" stroke="#1c1c1a" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="10" cy="7" r="1" fill="#1c1c1a" />
+                          </svg>
+                        ) : (
+                          /* target / radio icon */
+                          <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
+                            <circle cx="10" cy="10" r="7.5" stroke="#1c1c1a" strokeWidth="1.5" />
+                            <circle cx="10" cy="10" r="4" stroke="#1c1c1a" strokeWidth="1.5" />
+                            <circle cx="10" cy="10" r="1.5" fill="#1c1c1a" />
+                          </svg>
+                        )}
                       </div>
                       <div>
-                        <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>
-                          Completar tu perfil
-                        </p>
-                        <p className="text-[12px]" style={{ color: "rgba(28,28,26,0.45)" }}>
-                          5 preguntas · menos de 1 min
-                        </p>
+                        {profileComplete ? (
+                          <>
+                            <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>
+                              Empezá a invertir
+                            </p>
+                            <p className="text-[12px]" style={{ color: "rgba(28,28,26,0.45)" }}>
+                              Perfil {profileName || "listo"} · Todo configurado
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>
+                              Completar tu perfil
+                            </p>
+                            <p className="text-[12px]" style={{ color: "rgba(28,28,26,0.45)" }}>
+                              5 preguntas · menos de 1 min
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : (

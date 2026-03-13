@@ -13,6 +13,7 @@ import RedPillScreen from "./red-pill-screen"
 import FincraftScreen from "./fincraft-screen"
 import DollarsScreen from "./dollars-screen"
 import InversionesFlow from "./inversiones-flow"
+import DevStatePanel from "./dev-state-panel"
 import CardsScreen from "./cards-screen"
 import CashScreen from "./cash-screen"
 import BalanceTotalScreen from "./balance-total-screen"
@@ -139,13 +140,21 @@ export default function OnboardingFlow() {
   return (
     <UserConfigProvider>
       <OnboardingFlowContent />
+      <DevStatePanel />
     </UserConfigProvider>
   )
 }
 
 /* ── Inner app shell ────────────────────────────────────── */
 function OnboardingFlowContent() {
-  const { hasInvestments, setHasInvestments } = useUserConfig()
+  const {
+    hasAccount,
+    setHasAccount,
+    hasInvestments,
+    setHasInvestments,
+    setProfileName,
+    setProfileComplete,
+  } = useUserConfig()
   const [phase, setPhase] = useState<Phase>("intro")
   const [activeTab, setActiveTab] = useState("home")
   const [showRedPill, setShowRedPill] = useState(false)
@@ -312,18 +321,45 @@ function OnboardingFlowContent() {
       className="flex items-center gap-1 p-1 rounded-full"
       style={{ background: "rgba(28,28,26,0.10)" }}
     >
+      {/* Estado 1: Sin cuenta abierta */}
       <button
-        onClick={() => setHasInvestments(false)}
+        onClick={() => {
+          setHasAccount(false)
+          setHasInvestments(false)
+          setProfileName("")
+          setProfileComplete(false)
+        }}
         className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
         style={{
-          background: !hasInvestments ? "#1c1c1a" : "transparent",
-          color: !hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
+          background: !hasAccount && !hasInvestments ? "#1c1c1a" : "transparent",
+          color: !hasAccount && !hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
+        }}
+      >
+        Sin cuenta
+      </button>
+      {/* Estado 2: Sin inversiones */}
+      <button
+        onClick={() => {
+          setHasAccount(true)
+          setHasInvestments(false)
+          setProfileName("Moderado")
+          setProfileComplete(true)
+        }}
+        className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
+        style={{
+          background: hasAccount && !hasInvestments ? "#1c1c1a" : "transparent",
+          color: hasAccount && !hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
         }}
       >
         Sin inversiones
       </button>
+      {/* Estado 3: Con inversiones */}
       <button
-        onClick={() => setHasInvestments(true)}
+        onClick={() => {
+          setHasAccount(true)
+          setHasInvestments(true)
+          setProfileComplete(true)
+        }}
         className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
         style={{
           background: hasInvestments ? "#1c1c1a" : "transparent",
