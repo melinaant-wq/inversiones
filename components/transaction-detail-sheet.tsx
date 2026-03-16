@@ -1,7 +1,8 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { X, MapPin, CreditCard, ArrowDownLeft, ArrowUpRight, Copy, Check } from "lucide-react"
+import { MapPin, CreditCard, ArrowDownLeft, ArrowUpRight, Copy } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 import { useState } from "react"
 
 export interface TransactionDetail {
@@ -82,7 +83,7 @@ export default function TransactionDetailSheet({ open, transaction, onClose }: T
                 className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform"
                 style={{ background: "rgba(28,28,26,0.06)" }}
               >
-                <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+                <MorphIcon icon="close" size={16} color="#1c1c1a" />
               </button>
             </div>
 
@@ -132,7 +133,7 @@ export default function TransactionDetailSheet({ open, transaction, onClose }: T
                     {/* Static map image */}
                     <div className="relative w-full" style={{ height: 160 }}>
                       <img
-                        src={`https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+1c1c1a(${transaction.location.lng},${transaction.location.lat})/${transaction.location.lng},${transaction.location.lat},15,0/400x160@2x?access_token=MAPBOX_TOKEN_PLACEHOLDER`}
+                        src={`https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+1c1c1a(${transaction.location.lng},${transaction.location.lat})/${transaction.location.lng},${transaction.location.lat},15,0/400x160@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}`}
                         alt={`Mapa de ${transaction.location.name}`}
                         className="w-full h-full object-cover"
                         crossOrigin="anonymous"
@@ -245,7 +246,7 @@ export default function TransactionDetailSheet({ open, transaction, onClose }: T
                         {transaction.reference}
                       </span>
                       {copiedRef
-                        ? <Check className="w-3.5 h-3.5" style={{ color: "#446e0c" }} />
+                        ? <MorphIcon icon="check" size={14} color="#446e0c" />
                         : <Copy className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.3)" }} />
                       }
                     </button>

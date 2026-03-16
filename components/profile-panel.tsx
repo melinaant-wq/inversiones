@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Copy, Check, Ticket } from "lucide-react"
+import { Copy, Ticket } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 import ChatBottomSheet from "./chat-bottom-sheet"
 import SettingsBottomSheet from "./settings-bottom-sheet"
-import TicketsBottomSheet from "./tickets-bottom-sheet"
+import TicketsScreen from "./tickets-screen"
 
 interface Contact {
   username: string
@@ -76,7 +77,7 @@ export default function ProfilePanel({ open, onClose }: ProfilePanelProps) {
                 className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform"
                 style={{ background: "rgba(28,28,26,0.06)" }}
               >
-                <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+                <MorphIcon icon="close" size={16} color="#1c1c1a" />
               </button>
             </div>
 
@@ -121,7 +122,7 @@ export default function ProfilePanel({ open, onClose }: ProfilePanelProps) {
                     style={{ background: "rgba(28,28,26,0.06)" }}
                   >
                     {copied ? (
-                      <Check className="w-3.5 h-3.5" style={{ color: "#446e0c" }} />
+                      <MorphIcon icon="check" size={14} color="#446e0c" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.5)" }} />
                     )}
@@ -201,11 +202,12 @@ export default function ProfilePanel({ open, onClose }: ProfilePanelProps) {
               onClose={() => setShowSettings(false)}
             />
 
-            {/* Tickets bottom sheet */}
-            <TicketsBottomSheet
-              open={showTickets}
-              onClose={() => setShowTickets(false)}
-            />
+            {/* Tickets screen — full push from right */}
+            <AnimatePresence>
+              {showTickets && (
+                <TicketsScreen onClose={() => setShowTickets(false)} />
+              )}
+            </AnimatePresence>
           </motion.div>
         </>
       )}

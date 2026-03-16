@@ -6,13 +6,13 @@
 :root {
   --background: #f5f4f1;
   --foreground: #1c1c1a;
-  --card: #e5e4e1;
+  --card: #EDECE9;
   --card-foreground: #1c1c1a;
   --popover: #f5f4f1;
   --popover-foreground: #1c1c1a;
   --primary: #ddf74c;
   --primary-foreground: #1c1c1a;
-  --secondary: #e5e4e1;
+  --secondary: #E5E4E1;
   --secondary-foreground: #1c1c1a;
   --muted: #e5e4e1;
   --muted-foreground: #6b6961;
@@ -32,6 +32,8 @@
   --sidebar-accent-foreground: #1c1c1a;
   --sidebar-border: #d9d9d9;
   --sidebar-ring: #ddf74c;
+  --accent-lime: #ddf74c;
+  --accent-lime-foreground: #1c1c1a;
   --chart-1: #ddf74c;
   --chart-2: #1c1c1a;
   --chart-3: #6b6961;
@@ -78,6 +80,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-accent-lime: var(--accent-lime);
+  --color-accent-lime-foreground: var(--accent-lime-foreground);
 }
 
 @layer base {
@@ -87,6 +91,22 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .scrollbar-hide {

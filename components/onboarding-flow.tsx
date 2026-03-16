@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronRight } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 import BottomNav from "./bottom-nav"
-import { UserConfigProvider, useUserConfig } from "@/lib/user-config"
 import AppHeader from "./app-header"
 import HomeScreen from "./home-screen"
 import ActivityScreen from "./activity-screen"
 import PortfolioScreen from "./portfolio-screen"
+import MiniAppsScreen from "./mini-apps-screen"
 import RedPillScreen from "./red-pill-screen"
 import FincraftScreen from "./fincraft-screen"
 import DollarsScreen from "./dollars-screen"
@@ -17,6 +17,10 @@ import CardsScreen from "./cards-screen"
 import CashScreen from "./cash-screen"
 import BalanceTotalScreen from "./balance-total-screen"
 import ProfilePanel from "./profile-panel"
+import TicketsScreen from "./tickets-screen"
+import DepositarSheet, { type DepositType } from "./depositar-sheet"
+import EnviarSheet, { type SendContact } from "./enviar-sheet"
+import SendScreen from "./send-screen"
 
 type Phase = "intro" | "app"
 
@@ -127,27 +131,32 @@ function IntroScreen({ onContinue }: { onContinue: () => void }) {
           whileTap={{ scale: 0.92 }}
           whileHover={{ scale: 1.05 }}
         >
-          <ChevronRight className="w-5 h-5 text-white" />
+          <MorphIcon icon="chevron-right" size={20} color="white" />
         </motion.button>
       </div>
     </div>
   )
 }
 
-/* ── Root export — wraps with UserConfigProvider ────────── */
+/* ── Main Onboarding Flow ───────────────────────────────── */
 export default function OnboardingFlow() {
-  return (
-    <UserConfigProvider>
-      <OnboardingFlowContent />
-    </UserConfigProvider>
-  )
-}
-
-/* ── Inner app shell ────────────────────────────────────── */
-function OnboardingFlowContent() {
-  const { hasInvestments, setHasInvestments } = useUserConfig()
   const [phase, setPhase] = useState<Phase>("intro")
   const [activeTab, setActiveTab] = useState("home")
+
+  // Pesos balance — shared between HomeScreen and PortfolioScreen
+  const [balance, setBalance] = useState(4000000)
+  const balanceRef = useRef(4000000)
+  useEffect(() => {
+    const ARS_APY_RATE = 0.32
+    const SECONDS_PER_YEAR = 365 * 24 * 60 * 60
+    const UPDATES_PER_SECOND = 20
+    const interval = setInterval(() => {
+      const inc = (balanceRef.current * ARS_APY_RATE) / SECONDS_PER_YEAR / UPDATES_PER_SECOND
+      balanceRef.current += inc
+      setBalance(balanceRef.current)
+    }, 50)
+    return () => clearInterval(interval)
+  }, [])
   const [showRedPill, setShowRedPill] = useState(false)
   const [showFincraft, setShowFincraft] = useState(false)
   const [showDollars, setShowDollars] = useState(false)
@@ -156,6 +165,12 @@ function OnboardingFlowContent() {
   const [showCash, setShowCash] = useState(false)
   const [showBalanceTotal, setShowBalanceTotal] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showTickets, setShowTickets] = useState(false)
+  const [showDepositar, setShowDepositar] = useState(false)
+  const [showEnviar, setShowEnviar] = useState(false)
+  const [showSend, setShowSend] = useState(false)
+  const [selectedContact, setSelectedContact] = useState<SendContact | null>(null)
+  const [returnToPage, setReturnToPage] = useState(0)
 
   const clearOverlays = () => {
     setShowRedPill(false)
@@ -166,6 +181,11 @@ function OnboardingFlowContent() {
     setShowCash(false)
     setShowBalanceTotal(false)
     setShowProfile(false)
+    setShowTickets(false)
+    setShowDepositar(false)
+    setShowEnviar(false)
+    setShowSend(false)
+    setSelectedContact(null)
   }
 
   const handleTabChange = (tab: string) => {
@@ -177,30 +197,47 @@ function OnboardingFlowContent() {
   const handleCloseRedPill = () => setShowRedPill(false)
   const handleOpenFincraft = () => { setShowRedPill(false); setShowFincraft(true) }
   const handleCloseFincraft = () => setShowFincraft(false)
-  const handleOpenDollars = () => setShowDollars(true)
+  const handleOpenDollars = () => { setReturnToPage(1); setShowDollars(true) }
   const handleCloseDollars = () => setShowDollars(false)
-  const handleOpenInvestments = () => setShowInvestments(true)
+  const handleOpenInvestments = () => { setReturnToPage(1); setShowInvestments(true) }
   const handleCloseInvestments = () => setShowInvestments(false)
-  const handleOpenCards = () => setShowCards(true)
+  const handleOpenCards = () => { setReturnToPage(0); setShowCards(true) }
   const handleCloseCards = () => setShowCards(false)
-  const handleOpenCash = () => setShowCash(true)
+  const handleOpenCash = () => { setReturnToPage(0); setShowCash(true) }
   const handleCloseCash = () => setShowCash(false)
-  const handleOpenBalanceTotal = () => setShowBalanceTotal(true)
+  const handleOpenBalanceTotal = () => { setReturnToPage(1); setShowBalanceTotal(true) }
   const handleCloseBalanceTotal = () => setShowBalanceTotal(false)
   const handleOpenProfile = () => setShowProfile(true)
   const handleCloseProfile = () => setShowProfile(false)
+  const handleOpenTickets = () => setShowTickets(true)
+  const handleCloseTickets = () => setShowTickets(false)
+  const handleOpenDepositar = () => setShowDepositar(true)
+  const handleCloseDepositar = () => setShowDepositar(false)
+  const handleOpenEnviar = () => setShowEnviar(true)
+  const handleCloseEnviar = () => setShowEnviar(false)
+  const handleSelectContact = (contact: SendContact) => {
+    setSelectedContact(contact)
+    setShowEnviar(false)
+    setShowSend(true)
+  }
+  const handleCloseSend = () => { setShowSend(false); setSelectedContact(null) }
+  const handleDepositarSelect = (type: DepositType) => {
+    setShowDepositar(false)
+    if (type === "pesos") handleOpenCash()
+    else if (type === "dolares") handleOpenDollars()
+    else handleOpenInvestments()
+  }
 
   const goToApp = useCallback(() => setPhase("app"), [])
 
   const isApp = phase === "app"
-  const anyOverlay = showRedPill || showFincraft || showDollars || showInvestments || showCards || showCash || showBalanceTotal
+  const anyOverlay = showRedPill || showFincraft || showDollars || showInvestments || showCards || showCash || showBalanceTotal || showTickets || showSend
   const isHomePristine = isApp && activeTab === "home" && !anyOverlay
 
   // Portfolio grafico background
   const isPortfolioGrafico = isApp && activeTab === "portfolio"
 
   return (
-    <div className="flex flex-col items-center gap-4">
     <div
       className="relative w-[360px] h-[800px] rounded-[50px] overflow-hidden transition-colors duration-300"
       style={{
@@ -230,7 +267,7 @@ function OnboardingFlowContent() {
       {/* Header - only home tab, no overlays */}
       {isHomePristine && (
         <div className="absolute top-12 left-0 right-0 z-10">
-          <AppHeader onOpenRedPill={handleOpenRedPill} onOpenProfile={handleOpenProfile} />
+          <AppHeader onOpenProfile={handleOpenProfile} onOpenTickets={handleOpenTickets} />
         </div>
       )}
 
@@ -238,9 +275,7 @@ function OnboardingFlowContent() {
       <div
         className={[
           "h-full flex flex-col transition-colors duration-300",
-          isApp
-            ? (isHomePristine ? "pt-28" : "pt-14") + (anyOverlay ? "" : " pb-28")
-            : "pt-14 pb-8",
+          isApp ? (isHomePristine ? "pt-28" : "pt-14") + (showInvestments || showSend || showCash || showDollars || showCards || showTickets || showBalanceTotal ? " pb-0" : " pb-28") : "pt-14 pb-8",
         ].join(" ")}
       >
         <AnimatePresence mode="wait">
@@ -266,10 +301,12 @@ function OnboardingFlowContent() {
               transition={{ duration: 0.25 }}
               className="flex-1 min-h-0 flex flex-col"
             >
-              {showBalanceTotal ? (
+              {showTickets ? (
+                <TicketsScreen onClose={handleCloseTickets} />
+              ) : showBalanceTotal ? (
                 <BalanceTotalScreen onClose={handleCloseBalanceTotal} />
               ) : showCash ? (
-                <CashScreen onClose={handleCloseCash} />
+                <CashScreen onClose={handleCloseCash} balance={balance} />
               ) : showCards ? (
                 <CardsScreen onClose={handleCloseCards} />
               ) : showInvestments ? (
@@ -283,16 +320,29 @@ function OnboardingFlowContent() {
               ) : (
                 <>
                   {activeTab === "home" && (
-                    <HomeScreen onOpenCards={handleOpenCards} />
+                    <HomeScreen
+                      currentStage="complete"
+                      initialPage={returnToPage}
+                      balance={balance}
+                      onOpenCash={handleOpenCash}
+                      onOpenDollars={handleOpenDollars}
+                      onOpenInvestments={handleOpenInvestments}
+                      onOpenCards={handleOpenCards}
+                      onOpenBalanceTotal={handleOpenBalanceTotal}
+                      onDepositar={handleOpenDepositar}
+                      onEnviar={handleOpenEnviar}
+                    />
                   )}
                   {activeTab === "portfolio" && (
                     <PortfolioScreen
                       onOpenDollars={handleOpenDollars}
                       onOpenInvestments={handleOpenInvestments}
                       onOpenCash={handleOpenCash}
+                      pesosBalance={balance}
                     />
                   )}
                   {activeTab === "activity" && <ActivityScreen />}
+                  {activeTab === "more" && <MiniAppsScreen />}
                 </>
               )}
             </motion.div>
@@ -300,39 +350,20 @@ function OnboardingFlowContent() {
         </AnimatePresence>
       </div>
 
-      {isApp && !showInvestments && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />}
+      {isApp && !showInvestments && !showSend && !showCash && !showDollars && !showCards && !showTickets && !showBalanceTotal && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />}
 
       <ProfilePanel open={showProfile} onClose={handleCloseProfile} />
 
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-36 h-1.5 bg-foreground/20" />
-    </div>
+      <DepositarSheet open={showDepositar} onClose={handleCloseDepositar} onSelect={handleDepositarSelect} />
+      <EnviarSheet open={showEnviar} onClose={handleCloseEnviar} onSelectContact={handleSelectContact} />
 
-    {/* ── Dev toggle ── */}
-    <div
-      className="flex items-center gap-1 p-1 rounded-full"
-      style={{ background: "rgba(28,28,26,0.10)" }}
-    >
-      <button
-        onClick={() => setHasInvestments(false)}
-        className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
-        style={{
-          background: !hasInvestments ? "#1c1c1a" : "transparent",
-          color: !hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
-        }}
-      >
-        Sin inversiones
-      </button>
-      <button
-        onClick={() => setHasInvestments(true)}
-        className="text-[12px] font-semibold px-3 py-1 rounded-full transition-all"
-        style={{
-          background: hasInvestments ? "#1c1c1a" : "transparent",
-          color: hasInvestments ? "#ddf74c" : "rgba(28,28,26,0.4)",
-        }}
-      >
-        Con inversiones
-      </button>
-    </div>
+      <AnimatePresence>
+        {showSend && selectedContact && (
+          <SendScreen contact={selectedContact} onClose={handleCloseSend} />
+        )}
+      </AnimatePresence>
+
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-36 h-1.5 bg-foreground/20" />
     </div>
   )
 }

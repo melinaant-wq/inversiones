@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { X } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface FincraftScreenProps {
   onClose: () => void
@@ -434,7 +434,7 @@ export default function FincraftScreen({ onClose }: FincraftScreenProps) {
           className="w-8 h-8 flex items-center justify-center active:scale-95 transition-all"
           style={{ border: "2px solid #1c1c1a" }}
         >
-          <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+          <MorphIcon icon="close" size={16} color="#1c1c1a" />
         </button>
       </div>
 

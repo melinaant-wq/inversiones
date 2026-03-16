@@ -55,7 +55,7 @@ export default function InversionesSell({ stockId: initialStockId, onClose, onDo
   const netReceiveUSD = netReceiveARS / ARS_RATE
   const netReceiveBTC = netReceiveUSD / BTC_PRICE_USD
 
-  const isAmountValid = numericARS > 0 && numericARS <= totalCurrentValueARS
+  const isAmountValid = numericARS >= 100 && numericARS <= totalCurrentValueARS
 
   const displayAmt = numericARS > 0 ? numericARS.toLocaleString("es-AR") : "0"
   const fontPx = displayAmt.length <= 4 ? 60 : displayAmt.length <= 7 ? 46 : 34
@@ -328,7 +328,9 @@ export default function InversionesSell({ stockId: initialStockId, onClose, onDo
               >
                 {numericARS === 0
                   ? "Ingresá un monto"
-                  : !isAmountValid
+                  : numericARS < 100
+                  ? "Mínimo $100 ARS"
+                  : numericARS > totalCurrentValueARS
                   ? "Saldo insuficiente"
                   : "Continuar"}
               </button>
@@ -506,22 +508,6 @@ export default function InversionesSell({ stockId: initialStockId, onClose, onDo
                 </span>
               </p>
 
-              {/* Receive method chip */}
-              <div
-                className="flex items-center gap-2 mt-5 px-4 py-2.5 rounded-full"
-                style={{ background: "rgba(28,28,26,0.06)" }}
-              >
-                <span className="text-[14px]">
-                  {RECEIVE_OPTIONS.find((o) => o.id === receiveMethod)?.icon}
-                </span>
-                <span className="text-[13px]" style={{ color: "rgba(28,28,26,0.55)" }}>
-                  Recibís en{" "}
-                  <span className="font-semibold" style={{ color: "#1c1c1a" }}>
-                    {RECEIVE_OPTIONS.find((o) => o.id === receiveMethod)?.label}
-                  </span>
-                </span>
-              </div>
-
               <p
                 className="text-[11px] mt-5 leading-relaxed px-4"
                 style={{ color: "rgba(28,28,26,0.3)" }}
@@ -530,8 +516,8 @@ export default function InversionesSell({ stockId: initialStockId, onClose, onDo
               </p>
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
+            {/* CTA */}
+            <div className="flex-shrink-0">
               <button
                 onClick={() => setStep("complete")}
                 className="w-full py-4 rounded-2xl active:scale-95 transition-transform text-[16px] font-semibold"
@@ -539,23 +525,6 @@ export default function InversionesSell({ stockId: initialStockId, onClose, onDo
               >
                 Confirmar venta
               </button>
-              {/* Prototype: simulate other outcomes */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setStep("pending")}
-                  className="flex-1 py-2.5 rounded-xl text-[12px] font-medium active:scale-95 transition-transform"
-                  style={{ background: "rgba(245,158,11,0.12)", color: "#92400E" }}
-                >
-                  ⏳ Simular pendiente
-                </button>
-                <button
-                  onClick={() => setStep("cancel")}
-                  className="flex-1 py-2.5 rounded-xl text-[12px] font-medium active:scale-95 transition-transform"
-                  style={{ background: "rgba(230,57,70,0.08)", color: "#E63946" }}
-                >
-                  ✕ Simular cancelado
-                </button>
-              </div>
             </div>
           </motion.div>
         )}

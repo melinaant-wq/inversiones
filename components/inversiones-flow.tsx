@@ -3,13 +3,13 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import InversionesHome from "./inversiones-home"
-import InversionesEmptyHome from "./inversiones-home-empty"
 import InversionesMercado from "./inversiones-mercado"
 import InversionesStockDetail from "./inversiones-stock-detail"
 import InversionesBuy from "./inversiones-buy"
 import InversionesSell from "./inversiones-sell"
-import InversionesOnboarding from "./inversiones-onboarding"
-import { useUserConfig } from "@/lib/user-config"
+import InversionesPackDetail from "./inversiones-pack-detail"
+import InversionesHistorial from "./inversiones-historial"
+import InversionesOnboarding, { type InvestorProfile } from "./inversiones-onboarding"
 
 // ── Shared Data Types ────────────────────────────────────────
 
@@ -33,6 +33,7 @@ export interface Pack {
   volatility: "Baja" | "Media" | "Alta"
   color: string
   stocks: string[] // stock ids
+  darkText?: boolean // true when background is light (e.g. yellow)
 }
 
 export interface Holding {
@@ -40,7 +41,6 @@ export interface Holding {
   quantity: number
   avgPrice: number // USD
   totalInvested: number // USD
-  holdingDays: number // días desde la compra
 }
 
 // ── Mock Data ─────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export const PACKS: Pack[] = [
     description: "Las empresas tech más grandes del mundo en un solo click",
     returnY: 32.4,
     volatility: "Alta",
-    color: "#1c1c1a",
+    color: "#d45c7a",
     stocks: ["AAPL", "NVDA", "MSFT", "META"],
   },
   {
@@ -76,7 +76,7 @@ export const PACKS: Pack[] = [
     description: "Exposición diversificada a las 500 empresas más grandes de EE.UU.",
     returnY: 24.1,
     volatility: "Media",
-    color: "#2c5f2e",
+    color: "#e07c48",
     stocks: ["AAPL", "MSFT", "AMZN", "GOOGL"],
   },
   {
@@ -85,7 +85,8 @@ export const PACKS: Pack[] = [
     description: "Empresas con historial consistente de pago de dividendos",
     returnY: 8.4,
     volatility: "Baja",
-    color: "#5a3e2b",
+    color: "#f0c040",
+    darkText: true,
     stocks: ["MSFT", "AAPL", "AMZN", "GOOGL"],
   },
   {
@@ -94,22 +95,15 @@ export const PACKS: Pack[] = [
     description: "Compañías que están transformando industrias enteras",
     returnY: 41.2,
     volatility: "Alta",
-    color: "#7c3aed",
+    color: "#8c4fc8",
     stocks: ["NVDA", "TSLA", "META", "AMD"],
   },
 ]
 
 export const PORTFOLIO: Holding[] = [
-  { stockId: "AAPL",  quantity: 1.5, avgPrice: 165.00, totalInvested: 247.50, holdingDays: 365 },
-  { stockId: "TSLA",  quantity: 1.0, avgPrice: 260.00, totalInvested: 260.00, holdingDays: 60  },
-  { stockId: "NVDA",  quantity: 0.5, avgPrice: 720.00, totalInvested: 360.00, holdingDays: 180 },
-  { stockId: "MSFT",  quantity: 0.5, avgPrice: 380.00, totalInvested: 190.00, holdingDays: 120 },
-  { stockId: "AMZN",  quantity: 1.0, avgPrice: 175.00, totalInvested: 175.00, holdingDays: 90  },
-  { stockId: "GOOGL", quantity: 2.0, avgPrice: 155.00, totalInvested: 310.00, holdingDays: 200 },
-  { stockId: "META",  quantity: 0.5, avgPrice: 480.00, totalInvested: 240.00, holdingDays: 150 },
-  { stockId: "AMD",   quantity: 1.5, avgPrice: 145.00, totalInvested: 217.50, holdingDays: 75  },
-  { stockId: "SPY",   quantity: 0.8, avgPrice: 490.00, totalInvested: 392.00, holdingDays: 300 },
-  { stockId: "QQQ",   quantity: 0.6, avgPrice: 420.00, totalInvested: 252.00, holdingDays: 250 },
+  { stockId: "AAPL", quantity: 1.5, avgPrice: 165.00, totalInvested: 247.50 },
+  { stockId: "TSLA", quantity: 1.0, avgPrice: 260.00, totalInvested: 260.00 },
+  { stockId: "NVDA", quantity: 0.5, avgPrice: 720.00, totalInvested: 360.00 },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -132,33 +126,6 @@ export function calcPnL(holding: Holding, stock: Stock): { amount: number; pct: 
   const pct = (amount / holding.totalInvested) * 100
   return { amount, pct }
 }
-
-// TNA = ((Valor Actual / Capital Invertido) ^ (365 / días)) - 1
-export function calcTNA(holding: Holding, stock: Stock): number {
-  const currentValue = calcCurrentValue(holding, stock)
-  const ratio = currentValue / holding.totalInvested
-  return (Math.pow(ratio, 365 / holding.holdingDays) - 1) * 100
-}
-
-// Tiempo promedio ponderado del portafolio (días)
-export function calcPortfolioAvgDays(): number {
-  const totalInvested = PORTFOLIO.reduce((a, h) => a + h.totalInvested, 0)
-  return PORTFOLIO.reduce((a, h) => a + (h.totalInvested / totalInvested) * h.holdingDays, 0)
-}
-
-// TNA del portafolio total
-export function calcPortfolioTNA(): number {
-  const totalInvested = PORTFOLIO.reduce((a, h) => a + h.totalInvested, 0)
-  const stock_vals = PORTFOLIO.map(h => {
-    const s = getStockById(h.stockId)
-    return s ? calcCurrentValue(h, s) : h.totalInvested
-  })
-  const totalCurrent = stock_vals.reduce((a, v) => a + v, 0)
-  const avgDays = calcPortfolioAvgDays()
-  return (Math.pow(totalCurrent / totalInvested, 365 / avgDays) - 1) * 100
-}
-
-export const BENCHMARK_TNA = 10 // S&P 500 histórico ~10% anual
 
 export const TOTAL_PORTFOLIO_USD = PORTFOLIO.reduce((acc, h) => {
   const stock = getStockById(h.stockId)
@@ -192,11 +159,10 @@ function hashStr(str: string): number {
 export function generatePrices(stockId: string, period: string, currentPrice: number): number[] {
   const rng = seededRng(hashStr(stockId + period))
   const configs: Record<string, [number, number]> = {
-    "1D": [48, 0.0022],
-    "1W": [35, 0.009],
-    "1M": [30, 0.018],
-    "3M": [60, 0.028],
-    "1Y": [52, 0.048],
+    "1D":  [48, 0.0022],
+    "MTD": [30, 0.018],
+    "3M":  [60, 0.028],
+    "YTD": [52, 0.048],
   }
   const [n, vol] = configs[period] ?? [30, 0.02]
   const overallReturn = rng() * 0.45 - 0.12
@@ -249,10 +215,12 @@ export function areaPath(pts: [number, number][], h: number): string {
 
 export type InvScreen =
   | { type: "home" }
-  | { type: "mercado"; context: "buy" | "search"; profileFilter?: string }
+  | { type: "mercado"; context: "buy" | "search" }
   | { type: "stock-detail"; stockId: string }
   | { type: "buy"; stockId?: string }
   | { type: "sell"; stockId?: string }
+  | { type: "pack-detail"; packId: string }
+  | { type: "historial" }
 
 // ── Main Flow Component ───────────────────────────────────────
 
@@ -261,8 +229,8 @@ interface Props {
 }
 
 export default function InversionesFlow({ onClose }: Props) {
-  const { hasInvestments, setHasInvestments, setProfileComplete } = useUserConfig()
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingDone, setOnboardingDone] = useState(false)
+  const [investorProfile, setInvestorProfile] = useState<InvestorProfile | null>(null)
   const [stack, setStack] = useState<InvScreen[]>([{ type: "home" }])
   const current = stack[stack.length - 1]
 
@@ -276,32 +244,37 @@ export default function InversionesFlow({ onClose }: Props) {
   }
   const reset = () => setStack([{ type: "home" }])
 
+  const handleOnboardingComplete = (profile: InvestorProfile, packId?: string) => {
+    setInvestorProfile(profile)
+    setOnboardingDone(true)
+    if (packId) {
+      setStack([{ type: "home" }, { type: "pack-detail", packId }])
+    } else {
+      setStack([{ type: "home" }])
+    }
+  }
+
+  const handleOnboardingSkip = () => {
+    setOnboardingDone(true)
+    setStack([{ type: "home" }])
+  }
+
   const screenKey =
     current.type +
     (current.type === "stock-detail" ? current.stockId : "") +
     (current.type === "mercado" ? current.context : "") +
     (current.type === "buy" ? (current.stockId ?? "none") : "") +
-    (current.type === "sell" ? (current.stockId ?? "none") : "")
+    (current.type === "sell" ? (current.stockId ?? "none") : "") +
+    (current.type === "pack-detail" ? current.packId : "") +
+    (current.type === "historial" ? "historial" : "")
 
-  // Show onboarding quiz when explicitly triggered by the user
-  if (showOnboarding) {
+  if (!onboardingDone) {
     return (
-      <div className="flex-1 min-h-0 relative overflow-hidden" style={{ height: "100%" }}>
-        <InversionesOnboarding
-          onComplete={() => {
-            setHasInvestments(true)
-            setProfileComplete(true)
-            setShowOnboarding(false)
-          }}
-          onGoToMercado={(profileName) => {
-            setHasInvestments(true)
-            setProfileComplete(true)
-            setShowOnboarding(false)
-            push({ type: "mercado", context: "buy", profileFilter: profileName })
-          }}
-          onClose={() => setShowOnboarding(false)}
-        />
-      </div>
+      <InversionesOnboarding
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+        onClose={onClose}
+      />
     )
   }
 
@@ -317,29 +290,27 @@ export default function InversionesFlow({ onClose }: Props) {
           className="absolute inset-0 flex flex-col overflow-hidden"
           style={{ background: "#f5f4f1" }}
         >
-          {current.type === "home" && !hasInvestments && (
-            <InversionesEmptyHome
-              onClose={onClose}
-              onOpenMercado={(ctx) => push({ type: "mercado", context: ctx })}
-              onStartOnboarding={() => setShowOnboarding(true)}
-            />
-          )}
-          {current.type === "home" && hasInvestments && (
+          {current.type === "home" && (
             <InversionesHome
               onClose={onClose}
               onOpenMercado={(ctx) => push({ type: "mercado", context: ctx })}
               onOpenSell={() => push({ type: "sell" })}
               onOpenStockDetail={(id) => push({ type: "stock-detail", stockId: id })}
+              onOpenResultados={() => push({ type: "historial" })}
+              investorProfile={investorProfile}
+              emptyPortfolio={true}
             />
+          )}
+          {current.type === "historial" && (
+            <InversionesHistorial onClose={pop} />
           )}
           {current.type === "mercado" && (
             <InversionesMercado
               context={current.context}
-              profileFilter={current.profileFilter}
               onClose={pop}
               onOpenStockDetail={(id) => push({ type: "stock-detail", stockId: id })}
               onOpenBuy={(id) => push({ type: "buy", stockId: id })}
-              onStartOnboarding={() => setShowOnboarding(true)}
+              onOpenPackDetail={(id) => push({ type: "pack-detail", packId: id })}
             />
           )}
           {current.type === "stock-detail" && (
@@ -364,6 +335,17 @@ export default function InversionesFlow({ onClose }: Props) {
               onDone={reset}
             />
           )}
+          {current.type === "pack-detail" && (() => {
+            const pack = PACKS.find(p => p.id === current.packId)
+            if (!pack) return null
+            return (
+              <InversionesPackDetail
+                pack={pack}
+                onClose={pop}
+                onBuy={() => push({ type: "buy", stockId: pack.stocks[0] })}
+              />
+            )
+          })()}
         </motion.div>
       </AnimatePresence>
     </div>

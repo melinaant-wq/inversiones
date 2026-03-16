@@ -1,7 +1,8 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ArrowLeft, ArrowUpRight } from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface BalanceTotalScreenProps {
   onClose: () => void
@@ -37,12 +38,8 @@ export default function BalanceTotalScreen({ onClose }: BalanceTotalScreenProps)
       {/* Header */}
       <div className="px-5 pt-2 pb-4">
         <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-            style={{ background: "rgba(28,28,26,0.06)" }}
-          >
-            <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+          <button onClick={onClose}>
+              <MorphIcon icon="arrow-left" size={20} color="#fff" />
           </button>
           <h1
             className="text-[16px] font-semibold"

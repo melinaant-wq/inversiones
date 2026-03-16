@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface InvestmentsScreenProps {
   onClose: () => void
@@ -40,7 +41,7 @@ export default function InvestmentsScreen({ onClose }: InvestmentsScreenProps) {
             className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
             style={{ background: "rgba(28,28,26,0.06)" }}
           >
-            <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+            <MorphIcon icon="arrow-left" size={16} color="#1c1c1a" />
           </button>
           <h1
             className="text-[16px] font-semibold"

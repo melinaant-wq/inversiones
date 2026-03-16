@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion"
 import { useState } from "react"
-import { ChevronRight, Plus, Sprout, DollarSign, Users, Ticket, FileText, BarChart3, ArrowLeftRight, Bitcoin, Target, Trophy } from "lucide-react"
+import { Sprout, DollarSign, Users, Ticket, FileText, BarChart3, ArrowLeftRight, Bitcoin, Target, Trophy } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 const tabs = [
   { id: "my-apps", label: "Mis apps" },
@@ -94,7 +95,7 @@ export default function MiniAppsScreen() {
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
               style={{ border: "1.5px dashed rgba(28,28,26,0.15)" }}
             >
-              <Plus className="w-5 h-5" style={{ color: "rgba(28,28,26,0.25)" }} strokeWidth={1.5} />
+              <MorphIcon icon="plus" size={20} color="rgba(28,28,26,0.25)" strokeWidth={1.5} />
             </div>
             <span
               className="text-[11px] font-medium"
@@ -114,7 +115,7 @@ export default function MiniAppsScreen() {
             <span className="text-[14px] font-medium" style={{ color: "rgba(28,28,26,0.4)" }}>
               Developer Docs
             </span>
-            <ChevronRight className="w-4 h-4" style={{ color: "rgba(28,28,26,0.2)" }} strokeWidth={1.5} />
+            <MorphIcon icon="chevron-right" size={16} color="rgba(28,28,26,0.2)" strokeWidth={1.5} />
           </button>
           <button
             className="w-full flex items-center justify-between py-3.5"
@@ -123,7 +124,7 @@ export default function MiniAppsScreen() {
             <span className="text-[14px] font-medium" style={{ color: "rgba(28,28,26,0.4)" }}>
               Subir Mini-App
             </span>
-            <ChevronRight className="w-4 h-4" style={{ color: "rgba(28,28,26,0.2)" }} strokeWidth={1.5} />
+            <MorphIcon icon="chevron-right" size={16} color="rgba(28,28,26,0.2)" strokeWidth={1.5} />
           </button>
         </div>
       </div>

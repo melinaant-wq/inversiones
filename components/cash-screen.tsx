@@ -1,218 +1,234 @@
 "use client"
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Plus, Send, RefreshCw, QrCode } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { ArrowLeft, ChevronRight, Download, Send, ArrowDownLeft, ArrowUpRight } from "lucide-react"
+import RendimientosScreen from "@/components/rendimientos-screen"
+import RendimientosFaqScreen from "@/components/rendimientos-faq-screen"
+import RendimientosSarsScreen from "@/components/rendimientos-sars-screen"
+import RendimientosProtocolosScreen from "@/components/rendimientos-protocolos-screen"
+import RendimientosProtocolosDetailScreen from "@/components/rendimientos-protocolos-detail-screen"
+import MovimientosScreen from "@/components/movimientos-screen"
+
+type PesosScreen =
+  | "main"
+  | "rendimientos"
+  | "rendimientos-faq"
+  | "rendimientos-sars"
+  | "rendimientos-protocolos"
+  | "rendimientos-protocolos-detail"
+  | "movimientos"
 
 interface CashScreenProps {
   onClose: () => void
+  balance?: number
 }
 
-const transactions = [
-  { id: 1, type: "income", label: "Deposito de sueldo", amount: 850000, date: "Feb 15", icon: ArrowDownLeft },
-  { id: 2, type: "yield", label: "Rendimiento", amount: 34520, date: "Feb 14", icon: ArrowUpRight },
-  { id: 3, type: "expense", label: "Supermercado", amount: -28400, date: "Feb 13", icon: Send },
-  { id: 4, type: "expense", label: "Netflix", amount: -4299, date: "Feb 12", icon: Send },
-  { id: 5, type: "yield", label: "Rendimiento", amount: 33890, date: "Feb 11", icon: ArrowUpRight },
-  { id: 6, type: "income", label: "Pago freelance", amount: 120000, date: "Feb 10", icon: ArrowDownLeft },
-  { id: 7, type: "expense", label: "Restaurante", amount: -15600, date: "Feb 8", icon: Send },
-  { id: 8, type: "yield", label: "Rendimiento", amount: 33210, date: "Feb 7", icon: ArrowUpRight },
-  { id: 9, type: "expense", label: "Uber", amount: -8900, date: "Feb 5", icon: Send },
-  { id: 10, type: "income", label: "Transferencia recibida", amount: 200000, date: "Feb 3", icon: ArrowDownLeft },
+const PREVIEW_MOVIMIENTOS = [
+  {
+    id: 1,
+    tipo: "ingreso" as const,
+    descripcion: "Deposito recibido",
+    fecha: "28 Feb 2026",
+    monto: "+$125.000,00",
+  },
+  {
+    id: 2,
+    tipo: "egreso" as const,
+    descripcion: "Transferencia enviada",
+    fecha: "25 Feb 2026",
+    monto: "-$32.500,00",
+  },
 ]
 
-export default function CashScreen({ onClose }: CashScreenProps) {
-  const [balance] = useState(4000000.0000)
-  const [showDetail, setShowDetail] = useState<number | null>(null)
+function AnimatedBalance({ balance }: { balance: number }) {
+  const ANNUAL_RATE = 0.295
+  const PER_SECOND = ANNUAL_RATE / (365.25 * 24 * 3600)
 
-  const dollars = Math.floor(balance)
-  const centsStr = (balance - dollars).toFixed(4).slice(2)
+  const startRef = useRef(Date.now())
+  const [centavos, setCentavos] = useState(0)
 
-  const monthlyYield = Math.floor(balance * 0.32 / 12)
-  const dailyYield = Math.floor(balance * 0.32 / 365)
+  useEffect(() => {
+    let raf: number
+    function tick() {
+      const elapsed = (Date.now() - startRef.current) / 1000
+      const earned = balance * PER_SECOND * elapsed
+      setCentavos(Math.floor((earned * 100) % 100))
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [balance, PER_SECOND])
+
+  const display = centavos.toString().padStart(2, "0")
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col h-full">
-      {/* Header */}
-      <div className="px-5 pt-2 pb-4">
-        <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-            style={{ background: "rgba(28,28,26,0.06)" }}
-          >
-            <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
-          </button>
-          <h1
-            className="text-[16px] font-semibold"
-            style={{ color: "#1c1c1a" }}
-          >
-            Pesos
-          </h1>
-        </div>
-
-        {/* Balance hero */}
-        <div className="p-6 relative overflow-hidden rounded-3xl" style={{ background: "#ddf74c" }}>
-          <p
-            className="text-[14px] font-medium mb-1"
-            style={{ color: "rgba(28,28,26,0.5)" }}
-          >
-            Balance
-          </p>
-          <div className="flex items-baseline">
-            <span
-              className="text-[38px] font-bold tracking-tight leading-none"
-              style={{ color: "#1c1c1a" }}
-            >
-              ${dollars.toLocaleString("es-AR")}
-            </span>
-            <span
-              className="text-[16px] font-normal leading-none ml-0.5"
-              style={{ color: "rgba(28,28,26,0.35)" }}
-            >
-              ,{centsStr}
-            </span>
-          </div>
-
-          {/* APY + Earnings */}
-          <div className="flex items-center gap-3 mt-4">
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-full"
-              style={{ background: "rgba(28,28,26,0.8)", color: "#ddf74c" }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ background: "#ddf74c" }} />
-              32% anual
-            </span>
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: "rgba(28,28,26,0.4)" }}
-            >
-              +${dailyYield.toLocaleString("es-AR")}/dia
-            </span>
-          </div>
-
-          {/* Monthly projection */}
-          <div className="mt-5 pt-4" style={{ borderTop: "1px solid rgba(28,28,26,0.1)" }}>
-            <div className="flex justify-between items-center">
-              <span className="text-[13px] font-medium" style={{ color: "rgba(28,28,26,0.4)" }}>
-                {"Proyecci\u00f3n mensual"}
-              </span>
-              <span className="text-[15px] font-bold" style={{ color: "#1c1c1a" }}>
-                +${monthlyYield.toLocaleString("es-AR")}
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(28,28,26,0.08)" }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: "78%" }}
-                transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-                className="h-full rounded-full"
-                style={{ background: "#1c1c1a" }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 mt-3">
-          {[
-            { label: "Depositar", icon: Plus },
-            { label: "Enviar", icon: Send },
-            { label: "QR", icon: QrCode },
-            { label: "Swap", icon: RefreshCw },
-          ].map((action) => (
-            <button
-              key={action.label}
-              className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl active:scale-95 transition-transform"
-              style={{ background: "rgba(28,28,26,0.04)" }}
-            >
-              <action.icon className="w-4 h-4" style={{ color: "#1c1c1a" }} />
-              <span
-                className="text-[11px] font-medium"
-                style={{ color: "#1c1c1a" }}
-              >
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Transactions list */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
-        <p
-          className="text-[14px] font-semibold mb-3"
-          style={{ color: "rgba(28,28,26,0.4)" }}
-        >
-          Actividad
-        </p>
-        <div>
-          {transactions.map((tx, index) => (
-            <motion.button
-              key={tx.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.04 * index, duration: 0.25 }}
-              onClick={() => setShowDetail(showDetail === tx.id ? null : tx.id)}
-              className="w-full flex items-center gap-3 py-3 text-left active:opacity-60 transition-opacity"
-              style={{ borderBottom: "1px solid rgba(28,28,26,0.06)" }}
-            >
-              <div
-                className="w-9 h-9 flex items-center justify-center flex-shrink-0 rounded-full"
-                style={{
-                  background: tx.type === "yield" ? "rgba(219,255,0,0.2)" : "rgba(28,28,26,0.04)",
-                }}
-              >
-                <tx.icon
-                  className="w-4 h-4"
-                  style={{ color: tx.type === "yield" ? "#446e0c" : tx.amount > 0 ? "#1c1c1a" : "rgba(28,28,26,0.5)" }}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-[14px] font-medium truncate"
-                  style={{ color: "#1c1c1a" }}
-                >
-                  {tx.label}
-                </p>
-                <p
-                  className="text-[12px]"
-                  style={{ color: "rgba(28,28,26,0.35)" }}
-                >
-                  {tx.date}
-                </p>
-              </div>
-              <span
-                className="text-[15px] font-bold tabular-nums flex-shrink-0"
-                style={{ color: tx.amount > 0 ? "#1c1c1a" : "rgba(28,28,26,0.5)" }}
-              >
-                {tx.amount > 0 ? "+" : "-"}${Math.abs(tx.amount).toLocaleString("es-AR")}
-              </span>
-            </motion.button>
-          ))}
-        </div>
-
-        {/* Detail panel */}
-        <AnimatePresence>
-          {showDetail && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="p-4 mt-2 rounded-2xl" style={{ background: "rgba(28,28,26,0.03)" }}>
-                <p className="text-[12px] font-medium" style={{ color: "rgba(28,28,26,0.35)" }}>
-                  ID de transaccion
-                </p>
-                <p className="text-[13px] font-medium mt-1" style={{ color: "#1c1c1a" }}>
-                  0x{showDetail.toString(16).padStart(8, "0")}...b7e3
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    <div>
+      <p className="text-lg font-medium text-foreground">sARS</p>
+      <h1 className="text-[38px] font-bold leading-none tracking-tight text-foreground">
+        {Math.floor(balance).toLocaleString("es-AR")},
+        <span className="inline-block text-[20px] font-bold tabular-nums text-muted-foreground/50 transition-[opacity] duration-150">
+          {display}
+        </span>
+      </h1>
     </div>
+  )
+}
+
+function MainPesosView({
+  balance,
+  onClose,
+  onRendimientos,
+  onMovimientos,
+}: {
+  balance: number
+  onClose: () => void
+  onRendimientos: () => void
+  onMovimientos: () => void
+}) {
+  return (
+    <main className="flex flex-1 flex-col overflow-y-auto bg-background no-scrollbar">
+      {/* Header */}
+      <header className="relative px-5 pt-4 pb-2">
+        <button
+          onClick={onClose}
+          aria-label="Volver"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground shadow-sm"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-base font-semibold text-foreground">
+          Pesos
+        </h1>
+      </header>
+
+      {/* Balance */}
+      <section className="px-5 pt-6">
+        <AnimatedBalance balance={balance} />
+
+        <button
+          onClick={onRendimientos}
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent-lime px-4 py-2 transition-transform active:scale-[0.97]"
+        >
+          <span className="h-2 w-2 rounded-full bg-foreground animate-pulse-dot" />
+          <span className="text-sm font-semibold text-accent-lime-foreground">
+            Creciendo 29,5% anual
+          </span>
+          <ChevronRight className="h-4 w-4 text-accent-lime-foreground/70" />
+        </button>
+      </section>
+
+      {/* Action Buttons */}
+      <section className="flex justify-start gap-8 px-8 mt-8">
+        <button className="flex flex-col items-center gap-2 transition-transform active:scale-95">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-background">
+            <Download className="h-6 w-6" />
+          </div>
+          <span className="text-xs font-medium text-foreground">Depositar</span>
+        </button>
+        <button className="flex flex-col items-center gap-2 transition-transform active:scale-95">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-background">
+            <Send className="h-6 w-6" />
+          </div>
+          <span className="text-xs font-medium text-foreground">Enviar</span>
+        </button>
+      </section>
+
+      {/* Movimientos preview */}
+      <section className="mx-5 mt-8">
+        <div className="flex items-center justify-between pb-3">
+          <p className="text-sm font-semibold text-foreground">Movimientos</p>
+          <button onClick={onMovimientos} aria-label="Ver todos los movimientos">
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="flex flex-col">
+          {PREVIEW_MOVIMIENTOS.map((mov) => (
+            <div key={mov.id} className="flex items-center gap-4 py-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+                {mov.tipo === "ingreso" ? (
+                  <ArrowDownLeft className="h-5 w-5 text-foreground" />
+                ) : (
+                  <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex flex-1 flex-col">
+                <p className="text-sm font-medium text-foreground">{mov.descripcion}</p>
+                <p className="text-xs text-muted-foreground">{mov.fecha}</p>
+              </div>
+              <p
+                className={`text-sm font-semibold ${
+                  mov.tipo === "ingreso" ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {mov.monto}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="pb-8" />
+    </main>
+  )
+}
+
+export default function CashScreen({ onClose, balance = 500000 }: CashScreenProps) {
+  const [screen, setScreen] = useState<PesosScreen>("main")
+  const [protocolId, setProtocolId] = useState<string>("aave")
+
+  const navigate = (s: PesosScreen, pid?: string) => {
+    if (pid) setProtocolId(pid)
+    setScreen(s)
+  }
+
+  if (screen === "movimientos") {
+    return <MovimientosScreen onBack={() => setScreen("main")} />
+  }
+
+  if (screen === "rendimientos-faq") {
+    return <RendimientosFaqScreen onBack={() => setScreen("rendimientos")} />
+  }
+
+  if (screen === "rendimientos-sars") {
+    return <RendimientosSarsScreen onBack={() => setScreen("rendimientos")} />
+  }
+
+  if (screen === "rendimientos-protocolos-detail") {
+    return (
+      <RendimientosProtocolosDetailScreen
+        protocolId={protocolId}
+        onBack={() => setScreen("rendimientos-protocolos")}
+      />
+    )
+  }
+
+  if (screen === "rendimientos-protocolos") {
+    return (
+      <RendimientosProtocolosScreen
+        onBack={() => setScreen("rendimientos")}
+        onProtocolDetail={(id) => navigate("rendimientos-protocolos-detail", id)}
+      />
+    )
+  }
+
+  if (screen === "rendimientos") {
+    return (
+      <RendimientosScreen
+        onBack={() => setScreen("main")}
+        onFaq={() => setScreen("rendimientos-faq")}
+        onSars={() => setScreen("rendimientos-sars")}
+        onProtocolos={() => setScreen("rendimientos-protocolos")}
+      />
+    )
+  }
+
+  return (
+    <MainPesosView
+      balance={balance}
+      onClose={onClose}
+      onRendimientos={() => setScreen("rendimientos")}
+      onMovimientos={() => setScreen("movimientos")}
+    />
   )
 }

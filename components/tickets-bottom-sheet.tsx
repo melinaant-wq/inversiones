@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { X } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface TicketsBottomSheetProps {
   open: boolean
@@ -51,7 +51,7 @@ export default function TicketsBottomSheet({ open, onClose }: TicketsBottomSheet
                 className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform"
                 style={{ background: "rgba(28,28,26,0.06)" }}
               >
-                <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+                <MorphIcon icon="close" size={16} color="#1c1c1a" />
               </button>
             </div>
 

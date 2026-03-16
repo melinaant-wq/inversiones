@@ -1,34 +1,21 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Search, X, ArrowUpRight, ArrowDownRight, Package, BarChart3, TrendingUp, ChevronRight } from "lucide-react"
+import { Search, ArrowUpRight, ArrowDownRight, Package, BarChart3, TrendingUp, ArrowLeft, X } from "lucide-react"
 import { STOCKS, PACKS, Stock, Pack, getHolding } from "./inversiones-flow"
-import { useUserConfig } from "@/lib/user-config"
 
 interface Props {
   context: "buy" | "search"
-  profileFilter?: string
   onClose: () => void
   onOpenStockDetail: (id: string) => void
   onOpenBuy: (id: string) => void
-  onStartOnboarding?: () => void
-}
-
-// ── Profile-recommended stock IDs ─────────────────────────────
-const PROFILE_RECOMMENDED: Record<string, string[]> = {
-  Conservador: ["SPY", "VTI", "QQQ", "EEM"],
-  Moderado: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN"],
-  Audaz: ["NVDA", "TSLA", "AMD", "META"],
-}
-
-const PROFILE_EMOJI: Record<string, string> = {
-  Conservador: "🛡️",
-  Moderado: "📈",
-  Audaz: "⚡",
+  onOpenPackDetail: (id: string) => void
 }
 
 type TabType = "packs" | "etfs" | "stocks"
+
+const VOLATILITY_ORDER: Record<string, number> = { "Baja": 0, "Media": 1, "Alta": 2 }
 
 // ── Stock Avatar: clearbit → Google favicon → initials ───────
 function StockAvatar({ stock, size = 10 }: { stock: Stock; size?: number }) {
@@ -57,11 +44,36 @@ function StockAvatar({ stock, size = 10 }: { stock: Stock; size?: number }) {
           onError={() => setImgState((s) => s === "primary" ? "fallback" : "error")}
         />
       ) : (
-        <span
-          className="font-bold text-white"
-          style={{ fontSize: px * 0.28, lineHeight: 1 }}
-        >
+        <span className="font-bold text-white" style={{ fontSize: px * 0.28, lineHeight: 1 }}>
           {stock.symbol.slice(0, 2)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ── Mini stock avatar for pack cards (3-state fallback) ───────
+function MiniStockAvatar({ stock, borderColor }: { stock: Stock; borderColor: string }) {
+  const [imgState, setImgState] = useState<"primary" | "fallback" | "error">("primary")
+  const domain = stock.logo?.replace("https://logo.clearbit.com/", "")
+  const fallbackSrc = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null
+  const showInitials = imgState === "error" || (!stock.logo && !fallbackSrc)
+  const src = imgState === "fallback" && fallbackSrc ? fallbackSrc : stock.logo
+  return (
+    <div
+      className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center border-2"
+      style={{ background: showInitials ? stock.color : "#ffffff", borderColor }}
+    >
+      {!showInitials && src ? (
+        <img
+          src={src}
+          alt={stock.symbol}
+          style={{ width: 16, height: 16, objectFit: "contain" }}
+          onError={() => setImgState((s) => s === "primary" ? "fallback" : "error")}
+        />
+      ) : (
+        <span className="text-[9px] font-bold" style={{ color: "#ffffff" }}>
+          {stock.symbol.slice(0, 1)}
         </span>
       )}
     </div>
@@ -76,10 +88,6 @@ const ETF_TAGLINES: Record<string, string> = {
   EEM: "Mercados emergentes: China, India, Brasil y más",
 }
 
-// Curated sections for Acciones tab
-const TRENDING_IDS = ["AAPL", "NVDA", "MSFT", "AMZN"]
-const MOVERS_IDS = ["TSLA", "META", "AMD", "GOOGL"]
-
 const STOCK_FILTERS = [
   { label: "Populares",   ids: ["AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "META"], description: null },
   { label: "Dividendos",  ids: ["AAPL", "MSFT", "AMZN", "GOOGL"], description: "Las empresas que reparten parte de sus ganancias a sus accionistas de forma regular." },
@@ -88,31 +96,22 @@ const STOCK_FILTERS = [
 ]
 
 const ETF_IDS_SHOWN = ["SPY", "QQQ", "VTI"]
+const TRENDING_IDS = ["AAPL", "NVDA", "MSFT", "AMZN"]
 
-export default function InversionesMercado({ context, profileFilter, onClose, onOpenStockDetail, onOpenBuy, onStartOnboarding }: Props) {
-  const { hasInvestments } = useUserConfig()
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    if (profileFilter === "Audaz") return "stocks"
-    if (profileFilter) return "etfs"
-    return "packs"
-  })
+export default function InversionesMercado({ context, onClose, onOpenStockDetail, onOpenBuy, onOpenPackDetail }: Props) {
+  const [activeTab, setActiveTab] = useState<TabType>("packs")
   const [searchQuery, setSearchQuery] = useState("")
   const [searchActive, setSearchActive] = useState(context === "search")
   const [activeFilter, setActiveFilter] = useState("Populares")
-  const [showProfileReminder, setShowProfileReminder] = useState(false)
-
-  const handleBuy = useCallback((id: string) => {
-    if (!hasInvestments) {
-      setShowProfileReminder(true)
-    } else {
-      onOpenBuy(id)
-    }
-  }, [hasInvestments, onOpenBuy])
 
   const stocks = STOCKS.filter((s) => s.type === "stock")
   const etfs = STOCKS.filter((s) => s.type === "etf")
 
-  const allItems = useMemo(() => [...STOCKS, ...PACKS.map(p => ({ ...p, _isPack: true }))], [])
+  // Sorted Baja → Media → Alta (newbie-friendly)
+  const sortedPacks = useMemo(
+    () => [...PACKS].sort((a, b) => VOLATILITY_ORDER[a.volatility] - VOLATILITY_ORDER[b.volatility]),
+    []
+  )
 
   const searchResults = useMemo(() => {
     if (!searchQuery) return { stocks: [], etfs: [], packs: [] }
@@ -127,16 +126,14 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
   const isSearching = searchActive && searchQuery.length > 0
   const hasResults = isSearching && (searchResults.stocks.length + searchResults.etfs.length + searchResults.packs.length) > 0
 
-  const recommendedIds = profileFilter ? (PROFILE_RECOMMENDED[profileFilter] ?? []) : []
-
   return (
-    <div className="flex flex-col h-full overflow-hidden relative">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-2 pb-3 flex-shrink-0">
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform flex-shrink-0"
+            className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
             style={{ background: "rgba(28,28,26,0.06)" }}
           >
             <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
@@ -148,9 +145,9 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
             <button
               onClick={() => setSearchActive(!searchActive)}
               className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-              style={{ background: searchActive ? "#1c1c1a" : "rgba(28,28,26,0.06)" }}
+              style={{ background: searchActive ? "rgba(28,28,26,0.12)" : "rgba(28,28,26,0.06)" }}
             >
-              <Search className="w-4 h-4" style={{ color: searchActive ? "#ddf74c" : "#1c1c1a" }} />
+              <Search className="w-4 h-4" style={{ color: "#1c1c1a" }} />
             </button>
           )}
         </div>
@@ -179,7 +176,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")}>
-                    <X className="w-4 h-4" style={{ color: "rgba(28,28,26,0.35)" }} />
+                    <X className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.35)" }} />
                   </button>
                 )}
               </div>
@@ -187,7 +184,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
           )}
         </AnimatePresence>
 
-        {/* Tabs — ETFs first */}
+        {/* Tabs — secondary style, no black */}
         {!isSearching && (
           <div
             className="flex p-0.5 rounded-2xl"
@@ -204,15 +201,15 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all active:scale-95"
-                style={{ background: activeTab === tab.id ? "#1c1c1a" : "transparent" }}
+                style={{ background: activeTab === tab.id ? "rgba(28,28,26,0.10)" : "transparent" }}
               >
                 <tab.icon
                   className="w-3.5 h-3.5"
-                  style={{ color: activeTab === tab.id ? "#ddf74c" : "rgba(28,28,26,0.4)" }}
+                  style={{ color: activeTab === tab.id ? "#1c1c1a" : "rgba(28,28,26,0.4)" }}
                 />
                 <span
                   className="text-[13px] font-semibold"
-                  style={{ color: activeTab === tab.id ? "#ddf74c" : "rgba(28,28,26,0.5)" }}
+                  style={{ color: activeTab === tab.id ? "#1c1c1a" : "rgba(28,28,26,0.5)" }}
                 >
                   {tab.label}
                 </span>
@@ -224,28 +221,6 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
-
-        {/* ── Profile filter banner ── */}
-        {profileFilter && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="mb-3 px-3.5 py-2.5 rounded-2xl flex items-center gap-2.5"
-            style={{ background: "#ddf74c" }}
-          >
-            <span className="text-[20px] leading-none">{PROFILE_EMOJI[profileFilter] ?? "✦"}</span>
-            <div>
-              <p className="text-[12px] font-bold leading-tight" style={{ color: "#1c1c1a" }}>
-                Perfil {profileFilter}
-              </p>
-              <p className="text-[11px] leading-tight" style={{ color: "rgba(28,28,26,0.55)" }}>
-                Marcamos las opciones recomendadas para vos
-              </p>
-            </div>
-          </motion.div>
-        )}
-
         <AnimatePresence mode="wait">
 
           {/* ── Search results ── */}
@@ -265,7 +240,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     <>
                       <SectionLabel label="ETFs" />
                       {searchResults.etfs.map((s, i) => (
-                        <MinimalRow key={s.id} stock={s} index={i} tagline={ETF_TAGLINES[s.id]} onTap={() => onOpenStockDetail(s.id)} onBuy={() => handleBuy(s.id)} showBuy={context === "buy"} isRecommended={recommendedIds.includes(s.id)} />
+                        <MinimalRow key={s.id} stock={s} index={i} tagline={ETF_TAGLINES[s.id]} onTap={() => onOpenStockDetail(s.id)} onBuy={() => onOpenBuy(s.id)} showBuy={context === "buy"} />
                       ))}
                     </>
                   )}
@@ -273,7 +248,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     <>
                       <SectionLabel label="Packs" />
                       {searchResults.packs.map((p, i) => (
-                        <PackRow key={p.id} pack={p} index={i} onBuy={() => handleBuy(p.stocks[0])} />
+                        <PackRow key={p.id} pack={p} index={i} onViewDetail={() => onOpenPackDetail(p.id)} />
                       ))}
                     </>
                   )}
@@ -281,7 +256,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     <>
                       <SectionLabel label="Acciones" />
                       {searchResults.stocks.map((s, i) => (
-                        <MinimalRow key={s.id} stock={s} index={i} onTap={() => onOpenStockDetail(s.id)} onBuy={() => handleBuy(s.id)} showBuy={context === "buy"} isRecommended={recommendedIds.includes(s.id)} />
+                        <MinimalRow key={s.id} stock={s} index={i} onTap={() => onOpenStockDetail(s.id)} onBuy={() => onOpenBuy(s.id)} showBuy={context === "buy"} />
                       ))}
                     </>
                   )}
@@ -290,7 +265,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
             </motion.div>
           )}
 
-          {/* ── Packs tab ── */}
+          {/* ── Packs tab — sorted low → high volatility ── */}
           {!isSearching && activeTab === "packs" && (
             <motion.div
               key="packs"
@@ -308,12 +283,12 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                   Nuestros analistas combinaron los mejores activos según distintos objetivos. Invertís en varios de una sola vez.
                 </p>
               </div>
-              {PACKS.map((pack, i) => (
+              {sortedPacks.map((pack, i) => (
                 <PackCard
                   key={pack.id}
                   pack={pack}
                   index={i}
-                  onBuy={() => handleBuy(pack.stocks[0])}
+                  onViewDetail={() => onOpenPackDetail(pack.id)}
                 />
               ))}
             </motion.div>
@@ -346,14 +321,12 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     index={i}
                     tagline={ETF_TAGLINES[stock.id]}
                     onTap={() => onOpenStockDetail(stock.id)}
-                    onBuy={() => handleBuy(stock.id)}
+                    onBuy={() => onOpenBuy(stock.id)}
                     showBuy={context === "buy"}
-                    isRecommended={recommendedIds.includes(stock.id)}
                   />
                 ))}
             </motion.div>
           )}
-
 
           {/* ── Acciones tab ── */}
           {!isSearching && activeTab === "stocks" && (
@@ -364,7 +337,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.18 }}
             >
-              {/* Filter chips */}
+              {/* Filter chips — secondary style, no black */}
               <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
                 {STOCK_FILTERS.map((f) => (
                   <button
@@ -372,8 +345,8 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     onClick={() => setActiveFilter(f.label)}
                     className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all active:scale-95"
                     style={{
-                      background: activeFilter === f.label ? "#1c1c1a" : "rgba(28,28,26,0.07)",
-                      color: activeFilter === f.label ? "#ddf74c" : "rgba(28,28,26,0.55)",
+                      background: activeFilter === f.label ? "rgba(28,28,26,0.12)" : "rgba(28,28,26,0.07)",
+                      color: activeFilter === f.label ? "#1c1c1a" : "rgba(28,28,26,0.55)",
                     }}
                   >
                     {f.label}
@@ -381,7 +354,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                 ))}
               </div>
 
-              {/* Dividendos explanation */}
+              {/* Description pill */}
               <AnimatePresence>
                 {STOCK_FILTERS.find(f => f.label === activeFilter)?.description && (
                   <motion.div
@@ -391,10 +364,7 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden mb-3"
                   >
-                    <div
-                      className="px-3.5 py-3 rounded-2xl"
-                      style={{ background: "rgba(28,28,26,0.05)" }}
-                    >
+                    <div className="px-3.5 py-3 rounded-2xl" style={{ background: "rgba(28,28,26,0.05)" }}>
                       <p className="text-[12px] leading-relaxed" style={{ color: "rgba(28,28,26,0.55)" }}>
                         {STOCK_FILTERS.find(f => f.label === activeFilter)?.description}
                       </p>
@@ -421,10 +391,9 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
                         stock={stock!}
                         index={i}
                         onTap={() => onOpenStockDetail(stock!.id)}
-                        onBuy={() => handleBuy(stock!.id)}
+                        onBuy={() => onOpenBuy(stock!.id)}
                         showBuy={false}
                         noBorder={i === arr.length - 1}
-                        isRecommended={recommendedIds.includes(stock!.id)}
                       />
                     ))}
                 </motion.div>
@@ -434,154 +403,18 @@ export default function InversionesMercado({ context, profileFilter, onClose, on
 
         </AnimatePresence>
       </div>
-
-      {/* ── Profile reminder bottom sheet (new user) ── */}
-      <AnimatePresence>
-        {showProfileReminder && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-20"
-              style={{ background: "rgba(28,28,26,0.35)" }}
-              onClick={() => setShowProfileReminder(false)}
-            />
-            {/* Sheet */}
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              className="absolute bottom-0 left-0 right-0 rounded-t-3xl z-30 px-5 pb-6 pt-4"
-              style={{ background: "#f5f4f1" }}
-            >
-              {/* Handle */}
-              <div
-                className="w-10 h-1 rounded-full mx-auto mb-5"
-                style={{ background: "rgba(28,28,26,0.15)" }}
-              />
-
-              {/* Icon */}
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: "#e5e4e1" }}
-              >
-                <svg viewBox="0 0 20 20" fill="none" className="w-6 h-6">
-                  <circle cx="10" cy="10" r="7.5" stroke="#1c1c1a" strokeWidth="1.5" />
-                  <circle cx="10" cy="10" r="4" stroke="#1c1c1a" strokeWidth="1.5" />
-                  <circle cx="10" cy="10" r="1.5" fill="#1c1c1a" />
-                </svg>
-              </div>
-
-              <h3 className="text-[18px] font-bold mb-2" style={{ color: "#1c1c1a" }}>
-                Completar tu perfil
-              </h3>
-              <p className="text-[14px] leading-relaxed mb-5" style={{ color: "rgba(28,28,26,0.55)" }}>
-                Necesitás completar tu perfil de inversor antes de operar. Son 5 preguntas, menos de 1 minuto.
-              </p>
-
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  setShowProfileReminder(false)
-                  onStartOnboarding?.()
-                }}
-                className="w-full rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 mb-3"
-                style={{ background: "#1c1c1a", color: "#ffffff", height: 52 }}
-              >
-                Completar perfil
-                <ChevronRight className="w-4 h-4" />
-              </motion.button>
-
-              <button
-                onClick={() => setShowProfileReminder(false)}
-                className="w-full text-[14px] font-medium py-2 text-center"
-                style={{ color: "rgba(28,28,26,0.4)" }}
-              >
-                Ahora no
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
 
-// ── Curated section block ──────────────────────────────────────
-
-function CuratedSection({
-  title,
-  description,
-  ids,
-  context,
-  onTap,
-  onBuy,
-}: {
-  title: string
-  description: string
-  ids: string[]
-  context: "buy" | "search"
-  onTap: (id: string) => void
-  onBuy: (id: string) => void
-}) {
-  const items = ids.map((id) => STOCKS.find((s) => s.id === id)).filter(Boolean) as Stock[]
-
-  return (
-    <div className="mb-5">
-      <div
-        className="p-4 rounded-3xl"
-        style={{ background: "#e5e4e1" }}
-      >
-        <h4 className="text-[15px] font-bold mb-1" style={{ color: "#1c1c1a" }}>
-          {title}
-        </h4>
-        <p className="text-[12px] mb-3" style={{ color: "rgba(28,28,26,0.45)" }}>
-          {description}
-        </p>
-        {items.map((stock, i) => (
-          <MinimalRow
-            key={stock.id}
-            stock={stock}
-            index={i}
-            onTap={() => onTap(stock.id)}
-            onBuy={() => onBuy(stock.id)}
-            showBuy={context === "buy"}
-            noBorder={i === items.length - 1}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Minimal row (Cash App style) ──────────────────────────────
-
+// ── Minimal row ────────────────────────────────────────────────
 function MinimalRow({
-  stock,
-  index,
-  tagline,
-  onTap,
-  onBuy,
-  showBuy,
-  noBorder,
-  isRecommended,
+  stock, index, tagline, onTap, onBuy, showBuy, noBorder,
 }: {
-  stock: Stock
-  index: number
-  tagline?: string
-  onTap: () => void
-  onBuy: () => void
-  showBuy: boolean
-  noBorder?: boolean
-  isRecommended?: boolean
+  stock: Stock; index: number; tagline?: string
+  onTap: () => void; onBuy: () => void; showBuy: boolean; noBorder?: boolean
 }) {
-  const holding = getHolding(stock.id)
   const isUp = stock.change >= 0
-
   return (
     <motion.div
       initial={{ opacity: 0, x: -4 }}
@@ -592,43 +425,22 @@ function MinimalRow({
     >
       <button className="flex-1 flex items-center gap-3 active:opacity-70 transition-opacity" onClick={onTap}>
         <StockAvatar stock={stock} size={10} />
-
-        {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[14px] font-semibold truncate" style={{ color: "#1c1c1a" }}>
-              {stock.name}
-            </p>
-            {isRecommended && (
-              <span
-                className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                style={{ background: "#ddf74c", color: "#1c1c1a" }}
-              >
-                ✓
-              </span>
-            )}
-          </div>
+          <p className="text-[14px] font-semibold truncate" style={{ color: "#1c1c1a" }}>{stock.name}</p>
           <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.4)" }}>
             {tagline ?? `${stock.symbol} · ${stock.sector}`}
           </p>
         </div>
-
-        {/* Change only — Cash App style */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          {isUp ? (
-            <ArrowUpRight className="w-3.5 h-3.5" style={{ color: "#446e0c" }} />
-          ) : (
-            <ArrowDownRight className="w-3.5 h-3.5" style={{ color: "#E63946" }} />
-          )}
-          <span
-            className="text-[13px] font-semibold tabular-nums"
-            style={{ color: isUp ? "#446e0c" : "#E63946" }}
-          >
+          {isUp
+            ? <ArrowUpRight className="w-3.5 h-3.5" style={{ color: "#446e0c" }} />
+            : <ArrowDownRight className="w-3.5 h-3.5" style={{ color: "#E63946" }} />
+          }
+          <span className="text-[13px] font-semibold tabular-nums" style={{ color: isUp ? "#446e0c" : "#E63946" }}>
             {isUp ? "+" : ""}{stock.change.toFixed(2)}%
           </span>
         </div>
       </button>
-
       {showBuy && (
         <button
           onClick={onBuy}
@@ -642,13 +454,10 @@ function MinimalRow({
   )
 }
 
-// ── ETF Card (lighter than PackCard) ──────────────────────────
-
-function ETFCard({
-  stock, index, tagline, onTap, onBuy, showBuy, isRecommended,
-}: {
+// ── ETF Card ──────────────────────────────────────────────────
+function ETFCard({ stock, index, tagline, onTap, onBuy, showBuy }: {
   stock: Stock; index: number; tagline?: string
-  onTap: () => void; onBuy: () => void; showBuy: boolean; isRecommended?: boolean
+  onTap: () => void; onBuy: () => void; showBuy: boolean
 }) {
   const isUp = stock.change >= 0
   return (
@@ -657,32 +466,19 @@ function ETFCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.06 * index, duration: 0.2 }}
       className="flex items-center gap-3 p-3.5 rounded-2xl active:scale-[0.98] transition-transform cursor-pointer"
-      style={{ background: "#e5e4e1", outline: isRecommended ? "2px solid #ddf74c" : "none" }}
+      style={{ background: "#FEFEFE" }}
       onClick={onTap}
     >
       <StockAvatar stock={stock} size={10} />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>{stock.name}</p>
-          {isRecommended && (
-            <span
-              className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-              style={{ background: "#ddf74c", color: "#1c1c1a" }}
-            >
-              ✓
-            </span>
-          )}
-        </div>
+        <p className="text-[14px] font-semibold" style={{ color: "#1c1c1a" }}>{stock.name}</p>
         <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.45)" }}>{tagline ?? stock.sector}</p>
       </div>
       <div className="flex items-center gap-0.5 flex-shrink-0">
         {isUp
           ? <ArrowUpRight className="w-3.5 h-3.5" style={{ color: "#446e0c" }} />
           : <ArrowDownRight className="w-3.5 h-3.5" style={{ color: "#E63946" }} />}
-        <span
-          className="text-[13px] font-semibold tabular-nums"
-          style={{ color: isUp ? "#446e0c" : "#E63946" }}
-        >
+        <span className="text-[13px] font-semibold tabular-nums" style={{ color: isUp ? "#446e0c" : "#E63946" }}>
           {isUp ? "+" : ""}{stock.change.toFixed(2)}%
         </span>
       </div>
@@ -691,8 +487,7 @@ function ETFCard({
 }
 
 // ── Pack row (search results) ──────────────────────────────────
-
-function PackRow({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: () => void }) {
+function PackRow({ pack, index, onViewDetail }: { pack: Pack; index: number; onViewDetail: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -4 }}
@@ -701,20 +496,19 @@ function PackRow({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: () 
       className="flex items-center gap-3 py-3"
       style={{ borderBottom: "1px solid rgba(28,28,26,0.07)" }}
     >
-      <div
-        className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-        style={{ background: pack.color }}
-      >
+      <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: pack.color }}>
         <Package className="w-4 h-4 text-white" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-semibold truncate" style={{ color: "#1c1c1a" }}>{pack.name}</p>
-        <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.4)" }}>{pack.stocks.length} activos · Rendimiento +{pack.returnY}%</p>
+        <p className="text-[12px] truncate" style={{ color: "rgba(28,28,26,0.4)" }}>
+          {pack.stocks.length} activos · +{pack.returnY}% en 12 meses
+        </p>
       </div>
       <button
-        onClick={onBuy}
+        onClick={onViewDetail}
         className="px-3 py-1.5 rounded-xl active:scale-95 transition-transform text-[12px] font-semibold flex-shrink-0"
-        style={{ background: "#ddf74c", color: "#1c1c1a" }}
+        style={{ background: "rgba(28,28,26,0.08)", color: "#1c1c1a" }}
       >
         Ver detalle
       </button>
@@ -722,34 +516,17 @@ function PackRow({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: () 
   )
 }
 
-// ── Mini stock avatar for pack cards ──────────────────────────
-function MiniStockAvatar({ stock, borderColor }: { stock: Stock; borderColor: string }) {
-  const [imgError, setImgError] = useState(false)
-  return (
-    <div
-      className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center border-2"
-      style={{ background: imgError ? stock.color : "#ffffff", borderColor }}
-    >
-      {stock.logo && !imgError ? (
-        <img
-          src={stock.logo}
-          alt={stock.symbol}
-          style={{ width: 14, height: 14, objectFit: "contain" }}
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <span className="text-[8px] font-bold" style={{ color: imgError ? "#ffffff" : stock.color }}>
-          {stock.symbol.slice(0, 1)}
-        </span>
-      )}
-    </div>
-  )
-}
-
 // ── Pack Card (full) ───────────────────────────────────────────
-
-function PackCard({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: () => void }) {
-  const isUp = pack.returnY >= 0
+function PackCard({ pack, index, onViewDetail }: { pack: Pack; index: number; onViewDetail: () => void }) {
+  const dark = pack.darkText
+  const fg      = dark ? "#1c1c1a"             : "#ffffff"
+  const fgMid   = dark ? "rgba(28,28,26,0.60)" : "rgba(255,255,255,0.60)"
+  const fgLow   = dark ? "rgba(28,28,26,0.40)" : "rgba(255,255,255,0.50)"
+  const fgBadgeBg  = dark ? "rgba(28,28,26,0.10)" : "rgba(255,255,255,0.10)"
+  const fgBadgeTxt = dark ? "rgba(28,28,26,0.65)" : "rgba(255,255,255,0.70)"
+  const accent  = dark ? "#1c1c1a"             : "#ddf74c"
+  const btnBg   = dark ? "rgba(28,28,26,0.14)" : "#ddf74c"
+  const btnTxt  = dark ? "#1c1c1a"             : "#1c1c1a"
 
   return (
     <motion.div
@@ -759,41 +536,31 @@ function PackCard({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: ()
       className="p-4 rounded-2xl overflow-hidden relative"
       style={{ background: pack.color }}
     >
-      <div
-        className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-10"
-        style={{ background: "#ffffff" }}
-      />
-
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <p className="text-[15px] font-bold" style={{ color: "#ffffff" }}>
-              {pack.name}
-            </p>
-            <p className="text-[12px] mt-0.5 max-w-[180px]" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <p className="text-[15px] font-bold" style={{ color: fg }}>{pack.name}</p>
+            <p className="text-[12px] mt-0.5 max-w-[180px]" style={{ color: fgMid }}>
               {pack.description}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-0.5">
-              <ArrowUpRight className="w-3.5 h-3.5" style={{ color: "#ddf74c" }} />
-              <span className="text-[14px] font-bold" style={{ color: "#ddf74c" }}>
-                +{pack.returnY}%
-              </span>
+              <ArrowUpRight className="w-3.5 h-3.5" style={{ color: accent }} />
+              <span className="text-[14px] font-bold" style={{ color: accent }}>+{pack.returnY}%</span>
             </div>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.5)" }}>
-              12 meses
-            </span>
+            <span className="text-[10px]" style={{ color: fgLow }}>12 meses</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 mb-3">
-          {pack.stocks.slice(0, 4).map((sid) => {
+        {/* 3 company avatars */}
+        <div className="flex items-center gap-1.5 mb-3">
+          {pack.stocks.slice(0, 3).map((sid) => {
             const s = STOCKS.find((x) => x.id === sid)
             if (!s) return null
             return <MiniStockAvatar key={sid} stock={s} borderColor={pack.color} />
           })}
-          <span className="text-[11px] ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <span className="text-[11px] ml-1" style={{ color: fgLow }}>
             {pack.stocks.length} activos
           </span>
         </div>
@@ -801,14 +568,14 @@ function PackCard({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: ()
         <div className="flex items-center justify-between">
           <span
             className="text-[11px] font-semibold px-2 py-1 rounded-lg"
-            style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+            style={{ background: fgBadgeBg, color: fgBadgeTxt }}
           >
             Volatilidad {pack.volatility}
           </span>
           <button
-            onClick={onBuy}
+            onClick={onViewDetail}
             className="px-4 py-2 rounded-xl active:scale-95 transition-transform text-[13px] font-semibold"
-            style={{ background: "#ddf74c", color: "#1c1c1a" }}
+            style={{ background: btnBg, color: btnTxt }}
           >
             Ver detalle
           </button>
@@ -819,7 +586,6 @@ function PackCard({ pack, index, onBuy }: { pack: Pack; index: number; onBuy: ()
 }
 
 // ── Helpers ────────────────────────────────────────────────────
-
 function SectionLabel({ label }: { label: string }) {
   return (
     <p className="text-[11px] font-bold uppercase tracking-wider mb-2 mt-4 first:mt-0" style={{ color: "rgba(28,28,26,0.35)" }}>
@@ -832,9 +598,7 @@ function EmptySearch() {
   return (
     <div className="flex flex-col items-center py-10">
       <Search className="w-10 h-10 mb-3" style={{ color: "rgba(28,28,26,0.15)" }} />
-      <p className="text-[14px] font-medium" style={{ color: "rgba(28,28,26,0.35)" }}>
-        Sin resultados
-      </p>
+      <p className="text-[14px] font-medium" style={{ color: "rgba(28,28,26,0.35)" }}>Sin resultados</p>
     </div>
   )
 }

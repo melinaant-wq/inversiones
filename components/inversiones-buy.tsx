@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, ChevronDown, CheckCircle2, Clock, XCircle } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, Info } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 import { STOCKS, getStockById, ARS_RATE } from "./inversiones-flow"
 
 interface Props {
@@ -15,7 +16,7 @@ type Step = "asset-select" | "amount" | "confirm" | "complete" | "pending" | "ca
 
 const PAYMENT_METHODS = [
   { id: "ars",  label: "Pesos ARS", balance: 45230,  currency: "ARS", icon: "🇦🇷" },
-  { id: "usdc", label: "USDC",      balance: 123.45, currency: "USD", icon: "💵" },
+  { id: "usd",  label: "Dólares",   balance: 123.45, currency: "USD", icon: "💵" },
 ]
 
 const COMMISSION_RATE = 0.01
@@ -27,20 +28,44 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
   const [rawDigits, setRawDigits] = useState("")
   const [paymentIdx, setPaymentIdx] = useState(0)
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
+  const [showMarketInfo, setShowMarketInfo] = useState(false)
 
   const stock = selectedStockId ? getStockById(selectedStockId) : null
   const payment = PAYMENT_METHODS[paymentIdx]
+  const isUSD = payment.currency === "USD"
 
-  const numericAmount = parseInt(rawDigits) || 0
-  const amountUSD = numericAmount / ARS_RATE
-  const sharesReceived = stock ? amountUSD / stock.price : 0
-  const commission = numericAmount * COMMISSION_RATE
-  const totalToPay = numericAmount + commission
-  const maxBalance = payment.currency === "ARS" ? payment.balance : Math.floor(payment.balance * ARS_RATE)
-  const isAmountValid = numericAmount >= 100 && numericAmount <= maxBalance
+  // ── Amount derivations ─────────────────────────────────────────
+  // ARS mode: rawDigits = integer pesos
+  // USD mode: rawDigits = integer cents (divide by 100 for dollars)
+  const rawValue = parseInt(rawDigits) || 0
+  const numericUSD = isUSD ? rawValue / 100 : rawValue / ARS_RATE
+  const numericARS = isUSD ? (rawValue / 100) * ARS_RATE : rawValue
+  const sharesReceived = stock ? numericUSD / stock.price : 0
 
-  const displayAmt = numericAmount > 0 ? numericAmount.toLocaleString("es-AR") : "0"
+  // Commission and total in the selected payment currency
+  const commission = isUSD ? numericUSD * COMMISSION_RATE : numericARS * COMMISSION_RATE
+  const totalToPay  = isUSD ? numericUSD + commission     : numericARS + commission
+
+  // Validity: minimum 100 ARS equivalent, max = available balance in own currency
+  const isAmountValid =
+    numericARS >= 100 &&
+    (isUSD ? numericUSD <= payment.balance : numericARS <= payment.balance)
+
+  // ── Display helpers ────────────────────────────────────────────
+  const displayAmt = isUSD
+    ? (rawValue / 100).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : rawValue > 0 ? rawValue.toLocaleString("es-AR") : "0"
+
   const fontPx = displayAmt.length <= 4 ? 60 : displayAmt.length <= 7 ? 46 : 34
+
+  // ── Total display helpers (confirm + complete) ─────────────────
+  const totalDisplay = isUSD
+    ? `USD ${totalToPay.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `$${totalToPay.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS`
+
+  const commissionDisplay = isUSD
+    ? `USD ${commission.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `$${commission.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS`
 
   const handleKey = (key: string) => {
     if (!key) return
@@ -53,6 +78,12 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
       if (parseInt(next) > 9999999) return p
       return next
     })
+  }
+
+  const selectPayment = (idx: number) => {
+    setPaymentIdx(idx)
+    setRawDigits("") // reset amount when switching currency
+    setShowPaymentSheet(false)
   }
 
   const backFromStep = () => {
@@ -78,12 +109,8 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
           >
             <div className="px-5 pt-2 pb-3 flex-shrink-0">
               <div className="flex items-center gap-3 mb-4">
-                <button
-                  onClick={onClose}
-                  className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-                  style={{ background: "rgba(28,28,26,0.06)" }}
-                >
-                  <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+                <button onClick={onClose}>
+                    <MorphIcon icon="arrow-left" size={20} color="#fff" />
                 </button>
                 <h1 className="text-[16px] font-semibold" style={{ color: "#1c1c1a" }}>
                   ¿Qué querés comprar?
@@ -147,23 +174,38 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
           >
             {/* Header */}
             <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
-              <button
-                onClick={backFromStep}
-                className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-                style={{ background: "rgba(28,28,26,0.06)" }}
-              >
-                <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+              <button onClick={backFromStep}>
+                  <MorphIcon icon="arrow-left" size={20} color="#fff" />
               </button>
 
-              <button
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full"
-                style={{ background: "#e5e4e1" }}
-              >
-                <span className="text-[13px] font-semibold" style={{ color: "#1c1c1a" }}>
-                  Orden de mercado
-                </span>
-                <ChevronDown className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.45)" }} />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowMarketInfo((v) => !v)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full active:scale-95 transition-transform"
+                  style={{ background: "#e5e4e1" }}
+                >
+                  <span className="text-[13px] font-semibold" style={{ color: "#1c1c1a" }}>
+                    Precio de mercado actual
+                  </span>
+                  <Info className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.45)" }} />
+                </button>
+                <AnimatePresence>
+                  {showMarketInfo && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-full right-0 mt-2 p-3 rounded-2xl z-20 w-56"
+                      style={{ background: "#1c1c1a" }}
+                    >
+                      <p className="text-[12px] leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+                        Tu compra se ejecuta al precio vigente en el momento del procesamiento. El precio puede variar levemente.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
@@ -175,29 +217,39 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
 
             {/* Amount display */}
             <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-0">
-              <div className="flex items-baseline gap-2">
-                <span
-                  className="font-bold tabular-nums leading-none"
-                  style={{
-                    fontSize: fontPx,
-                    color: numericAmount > 0 ? "#1c1c1a" : "rgba(28,28,26,0.18)",
-                    transition: "font-size 0.1s",
-                  }}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={isUSD ? "usd" : "ars"}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex items-baseline gap-2"
                 >
-                  {displayAmt}
-                </span>
-                <span className="text-[19px] font-semibold" style={{ color: "rgba(28,28,26,0.3)" }}>
-                  ARS
-                </span>
-              </div>
+                  <span
+                    className="font-bold tabular-nums leading-none"
+                    style={{
+                      fontSize: fontPx,
+                      color: rawValue > 0 ? "#1c1c1a" : "rgba(28,28,26,0.18)",
+                      transition: "font-size 0.1s",
+                    }}
+                  >
+                    {displayAmt}
+                  </span>
+                  <span className="text-[19px] font-semibold" style={{ color: "rgba(28,28,26,0.3)" }}>
+                    {isUSD ? "USD" : "ARS"}
+                  </span>
+                </motion.div>
+              </AnimatePresence>
+
               <div className="mt-3 h-6 flex items-center">
                 <p className="text-[14px]" style={{ color: "rgba(28,28,26,0.45)" }}>
                   Obtenés{" "}
                   <span
                     className="font-semibold"
-                    style={{ color: numericAmount > 0 ? "#1c1c1a" : "rgba(28,28,26,0.3)" }}
+                    style={{ color: rawValue > 0 ? "#1c1c1a" : "rgba(28,28,26,0.3)" }}
                   >
-                    {numericAmount > 0
+                    {rawValue > 0
                       ? sharesReceived < 1
                         ? sharesReceived.toFixed(4)
                         : sharesReceived.toFixed(3)
@@ -222,7 +274,7 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                   {payment.currency === "ARS" ? "$" : "USD "}
                   {payment.balance.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5" style={{ color: "rgba(28,28,26,0.4)" }} />
+                <MorphIcon icon="chevron-down" size={14} color="rgba(28,28,26,0.4)" />
               </button>
             </div>
 
@@ -257,11 +309,11 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                   color: isAmountValid ? "#1c1c1a" : "rgba(28,28,26,0.3)",
                 }}
               >
-                {numericAmount === 0
+                {rawValue === 0
                   ? "Ingresá un monto"
-                  : numericAmount < 100
+                  : numericARS < 100
                   ? "Mínimo $100 ARS"
-                  : numericAmount > maxBalance
+                  : numericARS > (isUSD ? payment.balance * ARS_RATE : payment.balance)
                   ? "Saldo insuficiente"
                   : "Revisar compra"}
               </button>
@@ -281,12 +333,8 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
           >
             {/* Header */}
             <div className="flex items-center gap-3 mb-6 flex-shrink-0">
-              <button
-                onClick={() => setStep("amount")}
-                className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
-                style={{ background: "rgba(28,28,26,0.06)" }}
-              >
-                <ArrowLeft className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+              <button onClick={() => setStep("amount")}>
+                  <MorphIcon icon="arrow-left" size={20} color="#fff" />
               </button>
               <h1 className="text-[16px] font-semibold" style={{ color: "#1c1c1a" }}>
                 Confirmá tu compra
@@ -311,6 +359,13 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                   {stock.symbol}
                 </p>
               </div>
+              {/* Payment badge */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-[15px]">{payment.icon}</span>
+                <span className="text-[12px] font-semibold" style={{ color: "rgba(28,28,26,0.55)" }}>
+                  {payment.label}
+                </span>
+              </div>
             </div>
 
             {/* Big total */}
@@ -323,32 +378,20 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                   className="text-[48px] font-bold tabular-nums leading-none"
                   style={{ color: "#1c1c1a" }}
                 >
-                  ${totalToPay.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
+                  {isUSD
+                    ? totalToPay.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : `$${totalToPay.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`}
                 </span>
                 <span className="text-[20px] font-semibold" style={{ color: "rgba(28,28,26,0.3)" }}>
-                  ARS
+                  {isUSD ? "USD" : "ARS"}
                 </span>
               </div>
               <p className="text-[13px] mt-3" style={{ color: "rgba(28,28,26,0.4)" }}>
                 Incluye comisión del 1%{" "}
                 <span style={{ color: "rgba(28,28,26,0.55)" }}>
-                  (${commission.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS)
+                  ({commissionDisplay})
                 </span>
               </p>
-
-              {/* Payment method chip */}
-              <div
-                className="flex items-center gap-2 mt-5 px-4 py-2.5 rounded-full"
-                style={{ background: "rgba(28,28,26,0.06)" }}
-              >
-                <span className="text-[14px]">{payment.icon}</span>
-                <span className="text-[13px]" style={{ color: "rgba(28,28,26,0.55)" }}>
-                  Pagás con{" "}
-                  <span className="font-semibold" style={{ color: "#1c1c1a" }}>
-                    {payment.label}
-                  </span>
-                </span>
-              </div>
 
               <p
                 className="text-[11px] mt-5 leading-relaxed px-4"
@@ -358,8 +401,8 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
               </p>
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
+            {/* CTA */}
+            <div className="flex-shrink-0">
               <button
                 onClick={() => setStep("complete")}
                 className="w-full py-4 rounded-2xl active:scale-95 transition-transform text-[16px] font-semibold"
@@ -367,23 +410,6 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
               >
                 Confirmar compra
               </button>
-              {/* Prototype: simulate other outcomes */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setStep("pending")}
-                  className="flex-1 py-2.5 rounded-xl text-[12px] font-medium active:scale-95 transition-transform"
-                  style={{ background: "rgba(245,158,11,0.12)", color: "#92400E" }}
-                >
-                  ⏳ Simular pendiente
-                </button>
-                <button
-                  onClick={() => setStep("cancel")}
-                  className="flex-1 py-2.5 rounded-xl text-[12px] font-medium active:scale-95 transition-transform"
-                  style={{ background: "rgba(230,57,70,0.08)", color: "#E63946" }}
-                >
-                  ✕ Simular cancelado
-                </button>
-              </div>
             </div>
           </motion.div>
         )}
@@ -426,7 +452,7 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                 {stock.symbol}
               </p>
               <p className="text-[15px]" style={{ color: "rgba(28,28,26,0.5)" }}>
-                por ${totalToPay.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS
+                por {totalDisplay}
               </p>
               <div
                 className="mt-4 px-4 py-3 rounded-2xl"
@@ -509,10 +535,7 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
                 style={{ background: "rgba(245,158,11,0.1)" }}
               >
                 <p className="text-[13px]" style={{ color: "#92400E" }}>
-                  Monto reservado:{" "}
-                  <span className="font-semibold">
-                    ${totalToPay.toLocaleString("es-AR", { maximumFractionDigits: 0 })} ARS
-                  </span>
+                  Monto reservado: {totalDisplay}
                 </p>
               </div>
             </motion.div>
@@ -650,7 +673,7 @@ export default function InversionesBuy({ stockId: initialStockId, onClose, onDon
               {PAYMENT_METHODS.map((pm, i) => (
                 <button
                   key={pm.id}
-                  onClick={() => { setPaymentIdx(i); setShowPaymentSheet(false) }}
+                  onClick={() => selectPayment(i)}
                   className="w-full flex items-center gap-3 p-4 rounded-2xl mb-2 active:scale-[0.98] transition-transform"
                   style={{
                     background: paymentIdx === i ? "rgba(221,247,76,0.2)" : "rgba(28,28,26,0.05)",

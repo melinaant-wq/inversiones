@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Send } from "lucide-react"
+import { Send } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface Contact {
   username: string
@@ -98,7 +99,7 @@ export default function ChatBottomSheet({ open, contact, onClose }: ChatBottomSh
               className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform"
               style={{ background: "rgba(28,28,26,0.06)" }}
             >
-              <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+              <MorphIcon icon="close" size={16} color="#1c1c1a" />
             </button>
           </div>
 

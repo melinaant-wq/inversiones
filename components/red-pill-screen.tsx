@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { X } from "lucide-react"
+import { MorphIcon } from '@/components/ui/morph-icon'
 
 interface RedPillScreenProps {
   onClose: () => void
@@ -28,7 +28,7 @@ export default function RedPillScreen({ onClose, onOpenFincraft }: RedPillScreen
             border: "1px solid rgba(28,28,26,0.08)",
           }}
         >
-          <X className="w-4 h-4" style={{ color: "#1c1c1a" }} />
+          <MorphIcon icon="close" size={16} color="#1c1c1a" />
         </button>
       </div>
 
